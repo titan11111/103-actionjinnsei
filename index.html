@@ -238,11 +238,143 @@ canvas {
       もう一度、帰り道へ
     </button>
   </div>
+
+  <!-- BGM管理 -->
+  <audio id="bgm-stage1" loop preload="auto">
+    <source src="audio/Stage 1_ school.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-stage2" loop preload="auto">
+    <source src="audio/Stage 2_ Junior High.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-stage3" loop preload="auto">
+    <source src="audio/Stage 3_ High.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-stage4" loop preload="auto">
+    <source src="audio/stage4_university.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-stage5" loop preload="auto">
+    <source src="audio/stage5.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-stage6" loop preload="auto">
+    <source src="audio/stage6.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-stage7" loop preload="auto">
+    <source src="audio/stage7.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-boss" loop preload="auto">
+    <source src="audio/boss.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="bgm-lastboss" loop preload="auto">
+    <source src="audio/last boss.mp3" type="audio/mpeg">
+  </audio>
 </div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+// BGM管理システム（堅牢な実装）
+let currentBGM = null;
+const BGM_VOLUME = 0.7; // 70%音量
+
+// 全てのBGMを停止（音声ダブり防止）
+function stopAllBGM() {
+  try {
+    const bgmIds = [
+      'bgm-stage1', 'bgm-stage2', 'bgm-stage3', 'bgm-stage4',
+      'bgm-stage5', 'bgm-stage6', 'bgm-stage7',
+      'bgm-boss', 'bgm-lastboss'
+    ];
+    
+    bgmIds.forEach(id => {
+      const audio = document.getElementById(id);
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+    
+    currentBGM = null;
+  } catch (error) {
+    console.error('BGM停止エラー:', error);
+  }
+}
+
+// ステージBGMを再生
+function playStageBGM(stageNum) {
+  try {
+    // 現在のBGMを確実に停止
+    stopAllBGM();
+    
+    // ステージ番号のバリデーション
+    if (stageNum < 1 || stageNum > 7) {
+      console.warn('無効なステージ番号:', stageNum);
+      return;
+    }
+    
+    const bgmId = `bgm-stage${stageNum}`;
+    const audio = document.getElementById(bgmId);
+    
+    if (!audio) {
+      console.error(`BGM要素が見つかりません: ${bgmId}`);
+      return;
+    }
+    
+    // 音量設定と再生
+    audio.volume = BGM_VOLUME;
+    currentBGM = audio;
+    
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log(`ステージ${stageNum}のBGMを再生しました`);
+        })
+        .catch(error => {
+          console.error(`ステージ${stageNum}のBGM再生エラー:`, error);
+          currentBGM = null;
+        });
+    }
+  } catch (error) {
+    console.error('ステージBGM再生エラー:', error);
+    currentBGM = null;
+  }
+}
+
+// ボス戦BGMを再生（ラスボス判定付き）
+function playBossBGM(isLastBoss = false) {
+  try {
+    // 現在のBGMを確実に停止
+    stopAllBGM();
+    
+    const bgmId = isLastBoss ? 'bgm-lastboss' : 'bgm-boss';
+    const audio = document.getElementById(bgmId);
+    
+    if (!audio) {
+      console.error(`BGM要素が見つかりません: ${bgmId}`);
+      return;
+    }
+    
+    // 音量設定と再生
+    audio.volume = BGM_VOLUME;
+    currentBGM = audio;
+    
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log(`${isLastBoss ? 'ラスボス' : 'ボス'}戦のBGMを再生しました`);
+        })
+        .catch(error => {
+          console.error(`${isLastBoss ? 'ラスボス' : 'ボス'}戦BGM再生エラー:`, error);
+          currentBGM = null;
+        });
+    }
+  } catch (error) {
+    console.error('ボス戦BGM再生エラー:', error);
+    currentBGM = null;
+  }
+}
 
 // ゲーム状態
 let gameState = {
@@ -1316,6 +1448,8 @@ function startGame() {
   document.getElementById('startScreen').style.display = 'none';
   gameState.started = true;
   init();
+  // ステージ1のBGMを再生
+  playStageBGM(1);
   gameLoop();
 }
 
@@ -1456,6 +1590,8 @@ function update() {
       boss = new Enemy(camera.x + 600, 200, 'boss', 'normal', gameState.stage);
       boss.w = 60;
       boss.h = 60;
+      // ボス戦BGMを再生（ラスボス判定: ステージ7）
+      playBossBGM(gameState.stage === 7);
     }
   }
 
@@ -3650,8 +3786,11 @@ function nextStage() {
     camera.x = 0;
     // 新しいステージの障害物生成
     generateObstacles(gameState.stage);
+    // 新しいステージのBGMを再生
+    playStageBGM(gameState.stage);
   } else {
     // ゲームクリア（エンディング画面表示）
+    stopAllBGM(); // エンディング時はBGMを停止
     gameClear();
   }
 }
@@ -3666,6 +3805,7 @@ function gameClear() {
 // ゲームオーバー
 function gameOver() {
   gameState.started = false;
+  stopAllBGM(); // ゲームオーバー時はBGMを停止
   document.getElementById('finalScore').textContent = gameState.score;
   document.getElementById('gameOverScreen').style.display = 'flex';
 }
