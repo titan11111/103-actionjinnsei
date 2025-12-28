@@ -2,7 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
 <title>かえりみちヒーローズ</title>
 <style>
 * {
@@ -19,18 +22,63 @@ body {
   background: #000;
   font-family: 'Courier New', monospace;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   touch-action: none;
+  /* iOS safe-area対応 */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: constant(safe-area-inset-top) constant(safe-area-inset-right) constant(safe-area-inset-bottom) constant(safe-area-inset-left);
+  /* iOSでのタッチ遅延を防止 */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #gameContainer {
   width: 100%;
   height: 100%;
-  max-width: 100vh;
-  max-height: 56.25vw;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #000;
+}
+
+#statusBar {
+  width: 100%;
+  background: #000;
+  padding: 12px 20px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  z-index: 10;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+
+#ui {
+  color: white;
+  font-size: 18px;
+  text-shadow: 2px 2px 0 #000;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#ui > div {
+  white-space: nowrap;
+}
+
+#gameArea {
+  flex: 1;
   position: relative;
   background: #87CEEB;
+  overflow: hidden;
+  min-height: 0;
 }
 
 canvas {
@@ -39,52 +87,111 @@ canvas {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  /* 携帯画面ではアスペクト比を維持 */
+  object-fit: contain;
 }
 
-#ui {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  color: white;
-  font-size: 16px;
-  text-shadow: 2px 2px 0 #000;
+/* 携帯画面（縦向き）でのcanvas調整 */
+@media (orientation: portrait) and (max-width: 768px) {
+  canvas {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    /* アスペクト比16:9を維持（800:450 = 16:9） */
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    /* 古いブラウザ対応 */
+    max-width: 100vw;
+  }
+  
+  #gameArea {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* アスペクト比を維持するためのパディング */
+    padding: 0;
+  }
+  
+  /* aspect-ratioがサポートされていない場合の代替 */
+  @supports not (aspect-ratio: 16 / 9) {
+    canvas {
+      height: calc(100vw * 9 / 16);
+      max-height: 100%;
+    }
+  }
+}
+
+#controlBar {
+  width: 100%;
+  background: #000;
+  padding: 20px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 10;
+  min-height: 200px;
+  box-sizing: border-box;
 }
 
 #controls {
-  position: absolute;
-  bottom: 20px;
   width: 100%;
+  max-width: 600px;
   display: flex;
   justify-content: space-between;
-  padding: 0 20px;
-  z-index: 10;
+  align-items: center;
+  gap: 20px;
+  position: relative;
 }
 
-.btn {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.3);
-  border: 3px solid rgba(255,255,255,0.6);
+#leftSide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+#jumpArea {
+  display: flex;
+  justify-content: center;
+}
+
+#directionArea {
+  display: flex;
+  gap: 25px;
+  justify-content: center;
+}
+
+#rightSide {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+}
+
+.btn {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  border: 4px solid rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
   color: white;
   text-shadow: 2px 2px 0 #000;
   user-select: none;
   cursor: pointer;
   font-weight: bold;
+  flex-shrink: 0;
+  transition: all 0.1s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
 }
 
 .btn:active {
-  background: rgba(255,255,255,0.5);
-}
-
-#leftSide, #rightSide {
-  display: flex;
-  gap: 15px;
+  background: rgba(255,255,255,0.7);
+  transform: scale(0.95);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 #startScreen, #gameOverScreen {
@@ -98,7 +205,7 @@ canvas {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 100;
+  z-index: 200;
 }
 
 .title {
@@ -133,13 +240,23 @@ canvas {
   background: #45a049;
 }
 
-#gameOverScreen, #endingScreen {
+#gameOverScreen {
   display: none;
 }
 
 #endingScreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #FFE4B5 0%, #FFD700 25%, #FFB6C1 50%, #87CEEB 75%, #E0E0FF 100%);
   animation: warmGlow 3s ease-in-out infinite alternate;
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 @keyframes warmGlow {
@@ -175,36 +292,255 @@ canvas {
   font-weight: bold;
 }
 
+/* 縦向き（portrait）モード対応 */
+@media (orientation: portrait) {
+  #statusBar {
+    min-height: 50px;
+    padding: 10px 15px;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+  
+  #ui {
+    font-size: 16px;
+    gap: 15px;
+  }
+  
+  #controlBar {
+    min-height: 160px;
+    padding: 15px;
+    padding-bottom: max(15px, env(safe-area-inset-bottom));
+  }
+  
+  .btn {
+    width: 80px;
+    height: 80px;
+    font-size: 28px;
+  }
+  
+  #directionArea {
+    gap: 20px;
+  }
+  
+  #leftSide {
+    gap: 12px;
+  }
+  
+  .title {
+    font-size: 28px;
+  }
+  
+  .subtitle {
+    font-size: 16px;
+  }
+  
+  .startBtn {
+    font-size: 20px;
+    padding: 12px 30px;
+  }
+}
+
+/* 横向き（landscape）モード - 小さい画面 */
 @media (orientation: landscape) and (max-height: 500px) {
+  #statusBar {
+    min-height: 40px;
+    padding: 8px 15px;
+    padding-top: max(8px, env(safe-area-inset-top));
+  }
+  
+  #ui {
+    font-size: 14px;
+    gap: 12px;
+  }
+  
+  #controlBar {
+    min-height: 140px;
+    padding: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  
+  .btn {
+    width: 65px;
+    height: 65px;
+    font-size: 22px;
+  }
+  
+  #directionArea {
+    gap: 18px;
+  }
+  
+  #leftSide {
+    gap: 10px;
+  }
+}
+
+/* 非常に小さい画面（iPhone SEなど） */
+@media (max-width: 360px) {
+  #statusBar {
+    padding: 8px 10px;
+    padding-top: max(8px, env(safe-area-inset-top));
+  }
+  
+  #controlBar {
+    padding: 12px 10px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  
+  .btn {
+    width: 70px;
+    height: 70px;
+    font-size: 24px;
+  }
+  
+  #directionArea {
+    gap: 12px;
+  }
+  
+  #leftSide {
+    gap: 10px;
+  }
+  
+  #ui {
+    font-size: 14px;
+    gap: 10px;
+  }
+  
+  .title {
+    font-size: 24px;
+  }
+  
+  .subtitle {
+    font-size: 14px;
+  }
+  
+  .startBtn {
+    font-size: 18px;
+    padding: 10px 25px;
+  }
+}
+
+/* 中サイズの画面（iPhone 12/13/14など） */
+@media (min-width: 361px) and (max-width: 414px) and (orientation: portrait) {
+  .btn {
+    width: 85px;
+    height: 85px;
+    font-size: 30px;
+  }
+  
+  #directionArea {
+    gap: 22px;
+  }
+  
+  #leftSide {
+    gap: 15px;
+  }
+}
+
+/* 大きな画面（iPadなど） */
+@media (min-width: 768px) {
+  #statusBar {
+    min-height: 70px;
+    padding: 15px 30px;
+  }
+  
+  #ui {
+    font-size: 20px;
+    gap: 25px;
+  }
+  
+  #controlBar {
+    min-height: 200px;
+    padding: 25px;
+  }
+  
+  .btn {
+    width: 100px;
+    height: 100px;
+    font-size: 36px;
+  }
+  
+  #directionArea {
+    gap: 30px;
+  }
+  
+  #leftSide {
+    gap: 20px;
+  }
+  
+  .title {
+    font-size: 40px;
+  }
+  
+  .subtitle {
+    font-size: 20px;
+  }
+  
+  .startBtn {
+    font-size: 28px;
+    padding: 18px 50px;
+  }
+}
+
+/* 高さが非常に小さい画面（横向きのスマホなど） */
+@media (max-height: 400px) {
+  #statusBar {
+    min-height: 35px;
+    padding: 6px 12px;
+  }
+  
+  #controlBar {
+    min-height: 120px;
+    padding: 10px;
+  }
+  
   .btn {
     width: 60px;
     height: 60px;
     font-size: 20px;
   }
+  
+  #directionArea {
+    gap: 15px;
+  }
+  
+  #leftSide {
+    gap: 8px;
+  }
+  
   #ui {
-    font-size: 14px;
+    font-size: 12px;
+    gap: 10px;
   }
 }
 </style>
 </head>
 <body>
 <div id="gameContainer">
-  <canvas id="gameCanvas" width="800" height="450"></canvas>
-  
-  <div id="ui">
-    <div>ステージ: <span id="stage">1</span> - <span id="stageName">小学生</span></div>
-    <div>HP: <span id="hp">100</span></div>
-    <div>スコア: <span id="score">0</span></div>
+  <div id="statusBar">
+    <div id="ui">
+      <div>ステージ: <span id="stage">1</span> - <span id="stageName">小学生</span></div>
+      <div>HP: <span id="hp">100</span></div>
+      <div>スコア: <span id="score">0</span></div>
+    </div>
   </div>
 
-  <div id="controls">
-    <div id="leftSide">
-      <div class="btn" id="leftBtn">←</div>
-      <div class="btn" id="rightBtn">→</div>
-    </div>
-    <div id="rightSide">
-      <div class="btn" id="jumpBtn">↑</div>
-      <div class="btn" id="attackBtn">攻</div>
+  <div id="gameArea">
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+  </div>
+
+  <div id="controlBar">
+    <div id="controls">
+      <div id="leftSide">
+        <div id="jumpArea">
+          <div class="btn" id="jumpBtn">↑</div>
+        </div>
+        <div id="directionArea">
+          <div class="btn" id="leftBtn">←</div>
+          <div class="btn" id="rightBtn">→</div>
+        </div>
+      </div>
+      <div id="rightSide">
+        <div class="btn" id="attackBtn">攻</div>
+      </div>
     </div>
   </div>
 
@@ -272,6 +608,22 @@ canvas {
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+// パフォーマンス最適化設定
+let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+let targetFPS = isMobile ? 30 : 60; // モバイルは30fps、デスクトップは60fps
+let frameInterval = 1000 / targetFPS;
+let lastFrameTime = 0;
+let frameSkip = 0;
+let maxFrameSkip = 2; // 最大2フレームまでスキップ可能
+
+// iOS実機でのパフォーマンス調整
+if (isMobile) {
+  // 描画品質を下げてパフォーマンス向上
+  ctx.imageSmoothingEnabled = false;
+  // フレームスキップを許可
+  maxFrameSkip = 3;
+}
 
 // BGM管理システム（堅牢な実装）
 let currentBGM = null;
@@ -411,6 +763,16 @@ const player = {
   attacking: false,
   attackCooldown: 0,
   invincible: 0
+};
+
+// オメガビーム管理
+let omegaBeam = {
+  charges: 3, // 使用可能回数
+  isCharging: false,
+  chargeStartTime: 0,
+  chargeDuration: 3000, // 3秒（ミリ秒）
+  isActive: false,
+  activeTimer: 0
 };
 
 // 入力管理
@@ -856,8 +1218,10 @@ class Enemy {
   constructor(x, y, type = 'normal', enemyType = 'normal', stageNum = 1) {
     this.x = x;
     this.y = y;
-    this.w = 30;
-    this.h = 30;
+    // 携帯プレイ時は当たり判定も1.4倍に
+    const sizeMultiplier = isMobile ? 1.4 : 1;
+    this.w = 30 * sizeMultiplier;
+    this.h = 30 * sizeMultiplier;
     this.hp = type === 'boss' ? 50 : 10;
     this.maxHp = this.hp;
     this.vx = type === 'boss' ? 0 : -2;
@@ -1445,12 +1809,39 @@ function init() {
 
 // ゲーム開始
 function startGame() {
+  // すべての画面を非表示にしてからゲーム画面を表示
   document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('gameOverScreen').style.display = 'none';
+  document.getElementById('endingScreen').style.display = 'none';
+  
+  // ゲーム状態をリセット
+  gameState.stage = 1;
+  gameState.score = 0;
   gameState.started = true;
+  gameState.paused = false;
+  
+  // 入力状態をリセット
+  keys.left = false;
+  keys.right = false;
+  keys.jump = false;
+  keys.attack = false;
+  
+  // ゲーム初期化
   init();
+  updateUI();
+  
+  // オメガビームをリセット
+  omegaBeam.charges = 3;
+  omegaBeam.isCharging = false;
+  omegaBeam.isActive = false;
+  omegaBeam.activeTimer = 0;
+  
   // ステージ1のBGMを再生
   playStageBGM(1);
-  gameLoop();
+  
+  // ゲームループ開始（パフォーマンス最適化）
+  lastFrameTime = performance.now();
+  requestAnimationFrame(gameLoop);
 }
 
 // UI更新
@@ -1525,9 +1916,29 @@ function update() {
     player.onGround = false;
   }
 
-  // 攻撃（スコアに応じてタイプが変わる）
+  // オメガビームのチャージチェック
+  if (omegaBeam.isCharging && omegaBeam.charges > 0) {
+    const chargeTime = Date.now() - omegaBeam.chargeStartTime;
+    if (chargeTime >= omegaBeam.chargeDuration) {
+      // 3秒経過したらオメガビーム発動
+      activateOmegaBeam();
+      omegaBeam.isCharging = false;
+      omegaBeam.charges--;
+    }
+  }
+  
+  // オメガビームのアクティブ状態更新
+  if (omegaBeam.isActive) {
+    omegaBeam.activeTimer++;
+    if (omegaBeam.activeTimer > 120) { // 2秒間アクティブ
+      omegaBeam.isActive = false;
+      omegaBeam.activeTimer = 0;
+    }
+  }
+  
+  // 通常攻撃（スコアに応じてタイプが変わる）
   if (player.attackCooldown > 0) player.attackCooldown--;
-  if (keys.attack && player.attackCooldown === 0) {
+  if (keys.attack && player.attackCooldown === 0 && !omegaBeam.isCharging) {
     player.attacking = true;
     const attackType = getAttackTypeByScore();
     createPlayerProjectile(attackType);
@@ -1588,8 +1999,10 @@ function update() {
     if (stageProgress > currentStageLength && !boss) {
       bossActive = true;
       boss = new Enemy(camera.x + 600, 200, 'boss', 'normal', gameState.stage);
-      boss.w = 60;
-      boss.h = 60;
+      // 携帯プレイ時はボスの当たり判定も1.4倍に
+      const bossSizeMultiplier = isMobile ? 1.4 : 1;
+      boss.w = 60 * bossSizeMultiplier;
+      boss.h = 60 * bossSizeMultiplier;
       // ボス戦BGMを再生（ラスボス判定: ステージ7）
       playBossBGM(gameState.stage === 7);
     }
@@ -2682,9 +3095,13 @@ function drawPlayerStage7(px, py, size) {
 }
 
 function drawEnemySVG(x, y, type, stageNum, enemyType = 'normal') {
-  const px = x - camera.x;
-  const py = y;
-  const size = 1;
+  // 携帯プレイ時は敵とボスのサイズを1.4倍に
+  const size = isMobile ? 1.4 : 1;
+  
+  // サイズが1.4倍の場合、描画位置を調整して中心を合わせる
+  const sizeOffset = (size - 1) * 15; // 30pxの半分が15px、1.4倍だと0.4*15=6pxのオフセット
+  const px = x - camera.x - sizeOffset;
+  const py = y - sizeOffset;
   
   if (type === 'boss') {
     // ボスはステージごとに描画
@@ -3482,6 +3899,23 @@ function createPlayerProjectile(attackType) {
   }
 }
 
+// オメガビーム発動
+function activateOmegaBeam() {
+  if (omegaBeam.charges <= 0) return; // 使用回数がない場合は無効
+  
+  omegaBeam.isActive = true;
+  omegaBeam.activeTimer = 0;
+  
+  // 画面全体の敵にダメージ
+  enemies.forEach(e => {
+    e.hp -= 50; // 大ダメージ
+  });
+  
+  if (boss) {
+    boss.hp -= 100; // ボスにも大ダメージ
+  }
+}
+
 function drawProjectileSVG(x, y, enemy, projectile = null) {
   const px = x - camera.x;
   const py = y;
@@ -3687,9 +4121,12 @@ function drawItem(item) {
   }
 }
 
-// 描画処理
+// 描画処理（パフォーマンス最適化版）
 function draw() {
   const stage = stages[gameState.stage - 1];
+  
+  // 画面外判定のマージン（描画最適化のため）
+  const drawMargin = 50;
   
   // 背景
   ctx.fillStyle = stage.bg;
@@ -3719,18 +4156,26 @@ function draw() {
   // プレイヤー描画（ステージごと）
   drawPlayerSVG(player.x, player.y, player.invincible, gameState.stage);
 
-  // 敵描画（ステージごと）
-  enemies.forEach(e => drawEnemySVG(e.x, e.y, e.type, gameState.stage, e.enemyType));
-  if (boss) drawEnemySVG(boss.x, boss.y, 'boss', gameState.stage);
+  // 敵描画（ステージごと）- 画面外の敵は描画しない（パフォーマンス最適化）
+  enemies.forEach(e => {
+    if (e.x + e.w > camera.x - drawMargin && e.x < camera.x + canvas.width + drawMargin) {
+      drawEnemySVG(e.x, e.y, e.type, gameState.stage, e.enemyType);
+    }
+  });
+  if (boss && boss.x + boss.w > camera.x - drawMargin && boss.x < camera.x + canvas.width + drawMargin) {
+    drawEnemySVG(boss.x, boss.y, 'boss', gameState.stage);
+  }
 
-  // 弾描画
+  // 弾描画 - 画面外の弾は描画しない（パフォーマンス最適化）
   projectiles.forEach(p => {
-    drawProjectileSVG(p.x, p.y - (p.h || 6) / 2, p.enemy, p);
+    if (p.x > camera.x - drawMargin && p.x < camera.x + canvas.width + drawMargin) {
+      drawProjectileSVG(p.x, p.y - (p.h || 6) / 2, p.enemy, p);
+    }
   });
 
-  // アイテム描画
+  // アイテム描画 - 画面外のアイテムは描画しない（パフォーマンス最適化）
   items.forEach(item => {
-    if (!item.collected) {
+    if (!item.collected && item.x > camera.x - drawMargin && item.x < camera.x + canvas.width + drawMargin) {
       drawItem(item);
     }
   });
@@ -3755,6 +4200,92 @@ function draw() {
     ctx.textAlign = 'center';
     ctx.fillText('BOSS BATTLE', canvas.width / 2, 100);
     ctx.fillText(stage.boss, canvas.width / 2, 150);
+  }
+  
+  // オメガビームのチャージ中エフェクト
+  if (omegaBeam.isCharging && omegaBeam.charges > 0) {
+    const chargeTime = Date.now() - omegaBeam.chargeStartTime;
+    const chargePercent = Math.min(chargeTime / omegaBeam.chargeDuration, 1);
+    
+    // チャージリング
+    ctx.strokeStyle = `rgba(255, ${255 * (1 - chargePercent)}, 0, 0.8)`;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, 50 + chargePercent * 100, 0, Math.PI * 2 * chargePercent);
+    ctx.stroke();
+    
+    // チャージテキスト
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 30px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`オメガビーム チャージ中... ${Math.floor(chargePercent * 100)}%`, canvas.width / 2, canvas.height / 2 - 80);
+  }
+  
+  // オメガビーム発動エフェクト（派手で大きい）
+  if (omegaBeam.isActive) {
+    const progress = omegaBeam.activeTimer / 120;
+    const alpha = 1 - progress;
+    
+    // 画面全体の光るエフェクト
+    const gradient = ctx.createRadialGradient(
+      canvas.width / 2, canvas.height / 2, 0,
+      canvas.width / 2, canvas.height / 2, canvas.width
+    );
+    gradient.addColorStop(0, `rgba(255, 215, 0, ${alpha * 0.8})`);
+    gradient.addColorStop(0.3, `rgba(255, 165, 0, ${alpha * 0.6})`);
+    gradient.addColorStop(0.6, `rgba(255, 0, 0, ${alpha * 0.4})`);
+    gradient.addColorStop(1, `rgba(255, 0, 0, ${alpha * 0.2})`);
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 巨大なビーム
+    const beamWidth = canvas.width * (1 - progress * 0.5);
+    const beamHeight = canvas.height * 0.3;
+    const beamX = (canvas.width - beamWidth) / 2;
+    const beamY = canvas.height / 2 - beamHeight / 2;
+    
+    // ビームのグラデーション
+    const beamGradient = ctx.createLinearGradient(beamX, beamY, beamX + beamWidth, beamY + beamHeight);
+    beamGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.9})`);
+    beamGradient.addColorStop(0.3, `rgba(255, 215, 0, ${alpha * 0.8})`);
+    beamGradient.addColorStop(0.5, `rgba(255, 165, 0, ${alpha * 0.7})`);
+    beamGradient.addColorStop(0.7, `rgba(255, 0, 0, ${alpha * 0.6})`);
+    beamGradient.addColorStop(1, `rgba(255, 0, 0, ${alpha * 0.3})`);
+    
+    ctx.fillStyle = beamGradient;
+    ctx.fillRect(beamX, beamY, beamWidth, beamHeight);
+    
+    // 光るパーティクル
+    for (let i = 0; i < 50; i++) {
+      const angle = (i / 50) * Math.PI * 2;
+      const distance = 100 + progress * 200;
+      const x = canvas.width / 2 + Math.cos(angle) * distance;
+      const y = canvas.height / 2 + Math.sin(angle) * distance;
+      const size = 5 + Math.random() * 10;
+      
+      ctx.fillStyle = `rgba(255, 215, 0, ${alpha * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // オメガビームテキスト
+    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+    ctx.font = 'bold 50px monospace';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#FF0000';
+    ctx.lineWidth = 3;
+    ctx.strokeText('オメガビーム!!!', canvas.width / 2, canvas.height / 2);
+    ctx.fillText('オメガビーム!!!', canvas.width / 2, canvas.height / 2);
+  }
+  
+  // オメガビーム残り回数表示
+  if (omegaBeam.charges > 0) {
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`オメガビーム: ${omegaBeam.charges}回`, 10, canvas.height - 10);
   }
 }
 
@@ -3798,6 +4329,10 @@ function nextStage() {
 // ゲームクリア（エンディング画面）
 function gameClear() {
   gameState.started = false;
+  // 他の画面を非表示
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('gameOverScreen').style.display = 'none';
+  // エンディング画面を表示
   document.getElementById('endingScore').textContent = gameState.score;
   document.getElementById('endingScreen').style.display = 'flex';
 }
@@ -3806,14 +4341,37 @@ function gameClear() {
 function gameOver() {
   gameState.started = false;
   stopAllBGM(); // ゲームオーバー時はBGMを停止
+  // 他の画面を非表示
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('endingScreen').style.display = 'none';
+  // ゲームオーバー画面を表示
   document.getElementById('finalScore').textContent = gameState.score;
   document.getElementById('gameOverScreen').style.display = 'flex';
 }
 
-// ゲームループ
-function gameLoop() {
-  update();
-  draw();
+// ゲームループ（パフォーマンス最適化版）
+function gameLoop(currentTime) {
+  if (!gameState.started) return;
+  
+  // フレームレート制御
+  const deltaTime = currentTime - lastFrameTime;
+  
+  if (deltaTime >= frameInterval) {
+    // フレームスキップ処理
+    let updateCount = Math.floor(deltaTime / frameInterval);
+    updateCount = Math.min(updateCount, maxFrameSkip + 1);
+    
+    // 更新処理（スキップされたフレーム分も更新）
+    for (let i = 0; i < updateCount; i++) {
+      update();
+    }
+    
+    // 描画処理（1回だけ）
+    draw();
+    
+    lastFrameTime = currentTime - (deltaTime % frameInterval);
+  }
+  
   if (gameState.started) {
     requestAnimationFrame(gameLoop);
   }
@@ -3830,38 +4388,199 @@ function setupControls() {
 
   Object.entries(btns).forEach(([id, key]) => {
     const btn = document.getElementById(id);
+    if (!btn) return;
     
-    btn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      keys[key] = true;
-    });
-    
-    btn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      keys[key] = false;
-    });
-    
-    btn.addEventListener('mousedown', () => keys[key] = true);
-    btn.addEventListener('mouseup', () => keys[key] = false);
+    // 攻撃ボタンの特別処理（長押し検出）
+    if (id === 'attackBtn') {
+      let chargeTimer = null;
+      let chargeStartTime = 0;
+      
+      const startCharge = () => {
+        if (omegaBeam.charges <= 0) return; // 使用回数がない場合は無効
+        omegaBeam.isCharging = true;
+        chargeStartTime = Date.now();
+        omegaBeam.chargeStartTime = chargeStartTime;
+        btn.style.background = 'rgba(255,0,0,0.5)';
+        btn.style.boxShadow = '0 0 20px rgba(255,0,0,0.8)';
+      };
+      
+      const stopCharge = () => {
+        omegaBeam.isCharging = false;
+        btn.style.background = '';
+        btn.style.boxShadow = '';
+        if (chargeTimer) {
+          clearInterval(chargeTimer);
+          chargeTimer = null;
+        }
+      };
+      
+      // タッチイベント（iOS対応）
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        keys[key] = true;
+        startCharge();
+      }, { passive: false });
+      
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        keys[key] = false;
+        stopCharge();
+      }, { passive: false });
+      
+      btn.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        keys[key] = false;
+        stopCharge();
+      }, { passive: false });
+      
+      // マウスイベント（デスクトップ対応）
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        keys[key] = true;
+        startCharge();
+      });
+      
+      btn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+        stopCharge();
+      });
+      
+      btn.addEventListener('mouseleave', (e) => {
+        keys[key] = false;
+        stopCharge();
+      });
+    } else {
+      // 通常のボタン処理
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        keys[key] = true;
+        btn.style.background = 'rgba(255,255,255,0.7)';
+      }, { passive: false });
+      
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        keys[key] = false;
+        btn.style.background = '';
+      }, { passive: false });
+      
+      btn.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        keys[key] = false;
+        btn.style.background = '';
+      }, { passive: false });
+      
+      btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        keys[key] = true;
+        btn.style.background = 'rgba(255,255,255,0.7)';
+      });
+      
+      btn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+        btn.style.background = '';
+      });
+      
+      btn.addEventListener('mouseleave', (e) => {
+        keys[key] = false;
+        btn.style.background = '';
+      });
+    }
   });
+  
+  // 画面全体のタッチイベントを防止（iOSでのスクロール防止）
+  document.addEventListener('touchmove', (e) => {
+    if (e.target.closest('#controls') || e.target.closest('.btn')) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+  
+  // iOSでのダブルタップズームを防止
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
 }
 
 // キーボード操作
+let attackKeyDownTime = 0;
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') keys.left = true;
   if (e.key === 'ArrowRight') keys.right = true;
   if (e.key === 'ArrowUp' || e.key === ' ') keys.jump = true;
-  if (e.key === 'z' || e.key === 'Z') keys.attack = true;
+  if (e.key === 'z' || e.key === 'Z') {
+    keys.attack = true;
+    // オメガビームのチャージ開始
+    if (omegaBeam.charges > 0 && !omegaBeam.isCharging) {
+      omegaBeam.isCharging = true;
+      omegaBeam.chargeStartTime = Date.now();
+    }
+  }
 });
 
 document.addEventListener('keyup', (e) => {
   if (e.key === 'ArrowLeft') keys.left = false;
   if (e.key === 'ArrowRight') keys.right = false;
   if (e.key === 'ArrowUp' || e.key === ' ') keys.jump = false;
-  if (e.key === 'z' || e.key === 'Z') keys.attack = false;
+  if (e.key === 'z' || e.key === 'Z') {
+    keys.attack = false;
+    // オメガビームのチャージ停止
+    omegaBeam.isCharging = false;
+  }
 });
 
 setupControls();
+
+// 画面の向き変更時の処理（iOS対応）
+let resizeTimer;
+function handleResize() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    // 画面サイズ変更時の処理
+    // 必要に応じてcanvasのサイズを調整
+    const gameArea = document.getElementById('gameArea');
+    if (gameArea) {
+      // ゲームエリアのサイズに合わせてcanvasを調整
+      // CSSで100%に設定されているので、自動的に調整される
+    }
+  }, 100);
+}
+
+window.addEventListener('resize', handleResize);
+window.addEventListener('orientationchange', () => {
+  // iOSでの画面回転時の処理
+  setTimeout(() => {
+    handleResize();
+    // 画面回転時にビューポートを再計算
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+    }
+  }, 100);
+});
+
+// iOSでのダブルタップズームを完全に防止
+document.addEventListener('gesturestart', (e) => {
+  e.preventDefault();
+});
+document.addEventListener('gesturechange', (e) => {
+  e.preventDefault();
+});
+document.addEventListener('gestureend', (e) => {
+  e.preventDefault();
+});
 </script>
 </body>
 </html>
