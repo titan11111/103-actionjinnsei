@@ -1,0 +1,3727 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>かえりみちヒーローズ</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  touch-action: none;
+}
+
+#gameContainer {
+  width: 100%;
+  height: 100%;
+  max-width: 100vh;
+  max-height: 56.25vw;
+  position: relative;
+  background: #87CEEB;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  font-size: 16px;
+  text-shadow: 2px 2px 0 #000;
+  z-index: 10;
+}
+
+#controls {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+}
+
+.btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  border: 3px solid rgba(255,255,255,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  text-shadow: 2px 2px 0 #000;
+  user-select: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn:active {
+  background: rgba(255,255,255,0.5);
+}
+
+#leftSide, #rightSide {
+  display: flex;
+  gap: 15px;
+}
+
+#startScreen, #gameOverScreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.title {
+  font-size: 32px;
+  color: #FFD700;
+  text-shadow: 3px 3px 0 #000;
+  margin-bottom: 20px;
+}
+
+.subtitle {
+  font-size: 18px;
+  color: #FFF;
+  text-shadow: 2px 2px 0 #000;
+  margin-bottom: 30px;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.startBtn {
+  padding: 15px 40px;
+  font-size: 24px;
+  background: #4CAF50;
+  color: white;
+  border: 3px solid #FFF;
+  border-radius: 10px;
+  cursor: pointer;
+  text-shadow: 2px 2px 0 #000;
+  font-weight: bold;
+}
+
+.startBtn:hover {
+  background: #45a049;
+}
+
+#gameOverScreen, #endingScreen {
+  display: none;
+}
+
+#endingScreen {
+  background: linear-gradient(135deg, #FFE4B5 0%, #FFD700 25%, #FFB6C1 50%, #87CEEB 75%, #E0E0FF 100%);
+  animation: warmGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes warmGlow {
+  0% { background: linear-gradient(135deg, #FFE4B5 0%, #FFD700 25%, #FFB6C1 50%, #87CEEB 75%, #E0E0FF 100%); }
+  100% { background: linear-gradient(135deg, #FFF8DC 0%, #FFFFE0 25%, #FFEFD5 50%, #B0E0E6 75%, #F0F8FF 100%); }
+}
+
+.endingMessage {
+  font-size: 24px;
+  color: #2F2F2F;
+  text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+  line-height: 1.8;
+  max-width: 600px;
+  text-align: center;
+  padding: 30px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 20px;
+  margin: 20px;
+}
+
+.endingMessage .highlight {
+  color: #FF6B6B;
+  font-weight: bold;
+}
+
+.endingMessage .highlight2 {
+  color: #4169E1;
+  font-weight: bold;
+}
+
+.endingMessage .highlight3 {
+  color: #FFD700;
+  font-weight: bold;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .btn {
+    width: 60px;
+    height: 60px;
+    font-size: 20px;
+  }
+  #ui {
+    font-size: 14px;
+  }
+}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="800" height="450"></canvas>
+  
+  <div id="ui">
+    <div>ステージ: <span id="stage">1</span> - <span id="stageName">小学生</span></div>
+    <div>HP: <span id="hp">100</span></div>
+    <div>スコア: <span id="score">0</span></div>
+  </div>
+
+  <div id="controls">
+    <div id="leftSide">
+      <div class="btn" id="leftBtn">←</div>
+      <div class="btn" id="rightBtn">→</div>
+    </div>
+    <div id="rightSide">
+      <div class="btn" id="jumpBtn">↑</div>
+      <div class="btn" id="attackBtn">攻</div>
+    </div>
+  </div>
+
+  <div id="startScreen">
+    <div class="title">かえりみちヒーローズ</div>
+    <div class="subtitle">小学生から勇者へ<br>7つの帰り道を冒険しよう！</div>
+    <button class="startBtn" onclick="startGame()">スタート</button>
+  </div>
+
+  <div id="gameOverScreen">
+    <div class="title">GAME OVER</div>
+    <div class="subtitle">スコア: <span id="finalScore">0</span></div>
+    <button class="startBtn" onclick="location.reload()">もう一度</button>
+  </div>
+
+  <div id="endingScreen">
+    <div class="title" style="color: #FFD700; font-size: 36px; margin-bottom: 30px;">
+      おかえりなさい
+    </div>
+    <div class="endingMessage">
+      いろんな<span class="highlight">道</span>を<br>
+      帰ったね。<br><br>
+      いろんな<span class="highlight2">道</span>を通った<br>
+      <span class="highlight3">彩り</span>こそ<br>
+      素敵だね。
+    </div>
+    <div class="subtitle" style="margin-top: 30px; color: #2F2F2F; font-size: 20px;">
+      最終スコア: <span id="endingScore" style="color: #FF6B6B; font-weight: bold;">0</span>
+    </div>
+    <button class="startBtn" onclick="location.reload()" style="margin-top: 20px; background: linear-gradient(135deg, #FFB6C1, #87CEEB);">
+      もう一度、帰り道へ
+    </button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// ゲーム状態
+let gameState = {
+  stage: 1,
+  score: 0,
+  started: false,
+  paused: false
+};
+
+// ステージ定義
+const stages = [
+  { name: '小学生', bg: '#87CEEB', ground: '#90EE90', boss: '学級委員' },
+  { name: '中学生', bg: '#87CEEB', ground: '#8B7355', boss: '先輩' },
+  { name: '高校生', bg: '#2F4F7F', ground: '#696969', boss: '番長' },
+  { name: '大学生', bg: '#4B0082', ground: '#708090', boss: '教授' },
+  { name: '新社会人', bg: '#1C1C1C', ground: '#A9A9A9', boss: '上司' },
+  { name: 'サラリーマン', bg: '#000000', ground: '#696969', boss: '部長' },
+  { name: '勇者', bg: '#8B0000', ground: '#2F4F4F', boss: '魔王' }
+];
+
+// プレイヤー
+const player = {
+  x: 100,
+  y: 300,
+  w: 30,
+  h: 40,
+  vx: 0,
+  vy: 0,
+  hp: 100,
+  maxHp: 100,
+  speed: 5,
+  jumpPower: 12,
+  onGround: false,
+  attacking: false,
+  attackCooldown: 0,
+  invincible: 0
+};
+
+// 入力管理
+const keys = {
+  left: false,
+  right: false,
+  jump: false,
+  attack: false
+};
+
+// 敵配列
+let enemies = [];
+let boss = null;
+let bossActive = false;
+
+// 弾配列
+let projectiles = [];
+
+// アイテム配列（救急箱など）
+let items = [];
+
+// 障害物配列
+let obstacles = [];
+
+// カメラ
+let camera = { x: 0 };
+
+// ステージ進行
+let stageProgress = 0;
+// ステージごとの長さ
+function getStageLength(stageNum) {
+  if (stageNum <= 5) return 4000;
+  if (stageNum >= 6) return 6000; // ステージ6,7は6000ピクセル
+  return 4000;
+}
+const stageLength = 4000; // デフォルト（後方互換性のため）
+
+// 敵生成タイマー
+let enemySpawnTimer = 0;
+let enemySpawnCounter = 0; // 出現順序のカウンター
+
+// 障害物クラス
+class Obstacle {
+  constructor(x, y, w, h, type, stageNum) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.type = type; // 'spike', 'platform', 'movingPlatform', 'fallingRock', 'pendulum', 'hammer', 'jumpPad', 'lava', 'laser', 'electric'
+    this.stageNum = stageNum;
+    this.originalY = y;
+    this.originalX = x;
+    this.vx = 0;
+    this.vy = 0;
+    this.timer = 0;
+    this.active = true;
+    this.damage = 10; // ダメージ量
+    this.speed = 1;
+    
+    // タイプごとの初期化
+    if (type === 'movingPlatform') {
+      this.vx = stageNum <= 2 ? 1 : stageNum <= 4 ? 1.5 : 2;
+      this.range = 100;
+    } else if (type === 'pendulum') {
+      this.angle = 0;
+      this.angleSpeed = stageNum <= 2 ? 0.03 : stageNum <= 4 ? 0.05 : 0.07;
+      this.length = 60;
+      this.radius = 15;
+    } else if (type === 'fallingRock') {
+      this.vy = 0;
+      this.fallTimer = Math.random() * 60;
+    } else if (type === 'hammer') {
+      this.originalY = y;
+      this.hammerY = y;
+      this.direction = 1;
+    } else if (type === 'laser') {
+      this.laserOn = true;
+      this.laserTimer = 0;
+    }
+  }
+
+  update() {
+    this.timer++;
+    
+    switch(this.type) {
+      case 'movingPlatform':
+        // 左右に動く台
+        this.x += this.vx;
+        if (this.x > this.originalX + this.range || this.x < this.originalX - this.range) {
+          this.vx = -this.vx;
+        }
+        break;
+        
+      case 'pendulum':
+        // 振り子
+        this.angle += this.angleSpeed;
+        this.x = this.originalX + Math.sin(this.angle) * this.length;
+        break;
+        
+      case 'fallingRock':
+        // 落石
+        this.fallTimer--;
+        if (this.fallTimer <= 0 && this.vy === 0) {
+          this.vy = 2;
+        }
+        if (this.vy > 0) {
+          this.y += this.vy;
+          this.vy += 0.3; // 重力
+          if (this.y > 400) {
+            this.y = 400;
+            this.vy = 0;
+            this.fallTimer = 120 + Math.random() * 60;
+            this.y = this.originalY;
+          }
+        }
+        break;
+        
+      case 'hammer':
+        // ハンマー（上下に動く）
+        this.hammerY += this.direction * 2;
+        if (this.hammerY > this.originalY + 40 || this.hammerY < this.originalY) {
+          this.direction = -this.direction;
+        }
+        break;
+        
+      case 'laser':
+        // レーザー（点滅）
+        this.laserTimer++;
+        if (this.laserTimer > 60) {
+          this.laserOn = !this.laserOn;
+          this.laserTimer = 0;
+        }
+        break;
+    }
+  }
+
+  draw() {
+    const px = this.x - camera.x;
+    const py = this.y;
+    const size = 1;
+    
+    switch(this.type) {
+      case 'spike':
+        // トゲ
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(px, py, this.w, this.h);
+        ctx.fillStyle = '#FF0000';
+        for (let i = 0; i < this.w; i += 5) {
+          ctx.beginPath();
+          ctx.moveTo(px + i, py);
+          ctx.lineTo(px + i + 3, py - 8);
+          ctx.lineTo(px + i + 6, py);
+          ctx.fill();
+        }
+        break;
+        
+      case 'platform':
+        // 基本の台
+        ctx.fillStyle = '#8B7355';
+        ctx.fillRect(px, py, this.w, this.h);
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(px, py, this.w, 2);
+        break;
+        
+      case 'movingPlatform':
+        // 動く台
+        ctx.fillStyle = '#4169E1';
+        ctx.fillRect(px, py, this.w, this.h);
+        ctx.fillStyle = '#1E90FF';
+        ctx.fillRect(px, py, this.w, 2);
+        // 動いている表示
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(px + 2, py + 2, 3, 2);
+        break;
+        
+      case 'fallingRock':
+        // 落石
+        ctx.fillStyle = '#696969';
+        ctx.fillRect(px, py, this.w, this.h);
+        ctx.fillStyle = '#4A4A4A';
+        ctx.fillRect(px + 2, py + 2, this.w - 4, this.h - 4);
+        break;
+        
+      case 'pendulum':
+        // 振り子
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.originalX - camera.x, this.originalY);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+        ctx.fillStyle = '#FF4500';
+        ctx.beginPath();
+        ctx.arc(px, py, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FF0000';
+        ctx.beginPath();
+        ctx.arc(px, py, this.radius - 3, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+        
+      case 'hammer':
+        // ハンマー
+        ctx.fillStyle = '#4A4A4A';
+        ctx.fillRect(this.originalX - camera.x, this.originalY, 5, this.hammerY - this.originalY);
+        ctx.fillStyle = '#696969';
+        ctx.fillRect(this.originalX - camera.x - 3, this.hammerY, this.w + 6, this.h);
+        ctx.fillStyle = '#8B0000';
+        ctx.fillRect(this.originalX - camera.x, this.hammerY + 2, this.w, 3);
+        break;
+        
+      case 'jumpPad':
+        // ジャンプ台
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(px, py, this.w, this.h);
+        ctx.fillStyle = '#FFA500';
+        ctx.fillRect(px + 2, py + 2, this.w - 4, this.h - 4);
+        // 光るエフェクト
+        if (this.timer % 10 < 5) {
+          ctx.fillStyle = '#FFFF00';
+          ctx.fillRect(px + 4, py + 1, this.w - 8, 1);
+        }
+        break;
+        
+      case 'lava':
+        // 溶岩
+        ctx.fillStyle = '#FF4500';
+        ctx.fillRect(px, py, this.w, this.h);
+        ctx.fillStyle = '#FF0000';
+        ctx.fillRect(px, py, this.w, this.h / 2);
+        // 泡
+        ctx.fillStyle = '#FF8C00';
+        for (let i = 0; i < this.w; i += 15) {
+          ctx.beginPath();
+          ctx.arc(px + i + (this.timer % 15), py + (this.timer % 5), 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+        
+      case 'laser':
+        // レーザー（縦）
+        if (this.laserOn) {
+          ctx.fillStyle = '#FF0000';
+          ctx.fillRect(px, py, this.w, this.h);
+          ctx.fillStyle = '#FFD700';
+          ctx.fillRect(px + 1, py, this.w - 2, this.h);
+          // 光るエフェクト
+          ctx.fillStyle = 'rgba(255,255,255,0.5)';
+          ctx.fillRect(px - 2, py, this.w + 4, 2);
+          ctx.fillRect(px - 2, py + this.h - 2, this.w + 4, 2);
+        }
+        // 発射口
+        ctx.fillStyle = '#C0C0C0';
+        ctx.fillRect(px - 2, py, 4, this.h);
+        break;
+        
+      case 'electric':
+        // 電気バリア
+        ctx.fillStyle = '#4169E1';
+        ctx.fillRect(px, py, this.w, this.h);
+        if (this.timer % 10 < 5) {
+          ctx.fillStyle = '#00FFFF';
+          ctx.fillRect(px + 1, py, this.w - 2, this.h);
+          // 電気エフェクト
+          for (let i = 0; i < this.h; i += 5) {
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(px + Math.random() * this.w, py + i, 2, 2);
+          }
+        }
+        break;
+    }
+  }
+}
+
+// 障害物生成（ステージごと）
+function generateObstacles(stageNum) {
+  obstacles = [];
+  const groundY = 350;
+  
+  switch(stageNum) {
+    case 1: // 小学生 - 基本の台とトゲ
+      obstacles.push(new Obstacle(400, groundY - 40, 60, 20, 'platform', 1));
+      obstacles.push(new Obstacle(700, groundY - 20, 30, 20, 'spike', 1));
+      obstacles.push(new Obstacle(1000, groundY - 60, 80, 20, 'platform', 1));
+      obstacles.push(new Obstacle(1300, groundY - 30, 40, 20, 'spike', 1));
+      obstacles.push(new Obstacle(1600, groundY - 80, 100, 20, 'platform', 1));
+      obstacles.push(new Obstacle(2000, groundY - 30, 40, 20, 'spike', 1));
+      obstacles.push(new Obstacle(2300, groundY - 50, 70, 20, 'platform', 1));
+      obstacles.push(new Obstacle(2600, groundY - 20, 50, 20, 'spike', 1));
+      obstacles.push(new Obstacle(3000, groundY - 70, 90, 20, 'platform', 1));
+      obstacles.push(new Obstacle(3300, groundY - 30, 40, 20, 'spike', 1));
+      obstacles.push(new Obstacle(3600, groundY - 60, 80, 20, 'platform', 1));
+      break;
+      
+    case 2: // 中学生 - 動く台と振り子
+      obstacles.push(new Obstacle(400, groundY - 40, 60, 20, 'movingPlatform', 2));
+      obstacles.push(new Obstacle(600, groundY - 60, 50, 50, 'pendulum', 2));
+      obstacles.push(new Obstacle(900, groundY - 50, 70, 20, 'platform', 2));
+      obstacles.push(new Obstacle(1100, groundY - 70, 50, 50, 'pendulum', 2));
+      obstacles.push(new Obstacle(1400, groundY - 40, 60, 20, 'movingPlatform', 2));
+      obstacles.push(new Obstacle(1700, groundY - 60, 50, 50, 'pendulum', 2));
+      obstacles.push(new Obstacle(2000, groundY - 50, 70, 20, 'platform', 2));
+      obstacles.push(new Obstacle(2300, groundY - 40, 60, 20, 'movingPlatform', 2));
+      obstacles.push(new Obstacle(2500, groundY - 70, 50, 50, 'pendulum', 2));
+      obstacles.push(new Obstacle(2800, groundY - 50, 70, 20, 'platform', 2));
+      obstacles.push(new Obstacle(3100, groundY - 40, 60, 20, 'movingPlatform', 2));
+      obstacles.push(new Obstacle(3400, groundY - 60, 50, 50, 'pendulum', 2));
+      obstacles.push(new Obstacle(3700, groundY - 50, 70, 20, 'platform', 2));
+      break;
+      
+      case 3: // 高校生 - トゲと落石
+      obstacles.push(new Obstacle(500, groundY - 30, 50, 20, 'spike', 3));
+      obstacles.push(new Obstacle(600, -50, 30, 30, 'fallingRock', 3)); // 上から落ちる
+      obstacles.push(new Obstacle(900, groundY - 40, 60, 20, 'platform', 3));
+      obstacles.push(new Obstacle(1100, groundY - 30, 40, 20, 'spike', 3));
+      obstacles.push(new Obstacle(1200, -50, 30, 30, 'fallingRock', 3)); // 上から落ちる
+      obstacles.push(new Obstacle(1500, groundY - 50, 70, 20, 'platform', 3));
+      obstacles.push(new Obstacle(1700, groundY - 30, 50, 20, 'spike', 3));
+      obstacles.push(new Obstacle(1900, -50, 30, 30, 'fallingRock', 3));
+      obstacles.push(new Obstacle(2200, groundY - 40, 60, 20, 'platform', 3));
+      obstacles.push(new Obstacle(2400, groundY - 30, 40, 20, 'spike', 3));
+      obstacles.push(new Obstacle(2600, -50, 30, 30, 'fallingRock', 3));
+      obstacles.push(new Obstacle(2900, groundY - 50, 70, 20, 'platform', 3));
+      obstacles.push(new Obstacle(3100, groundY - 30, 50, 20, 'spike', 3));
+      obstacles.push(new Obstacle(3300, -50, 30, 30, 'fallingRock', 3));
+      obstacles.push(new Obstacle(3600, groundY - 40, 60, 20, 'platform', 3));
+      obstacles.push(new Obstacle(3800, groundY - 30, 40, 20, 'spike', 3));
+      break;
+      
+    case 4: // 大学生 - 動く障害物とジャンプ台
+      obstacles.push(new Obstacle(400, groundY - 40, 60, 20, 'movingPlatform', 4));
+      obstacles.push(new Obstacle(600, groundY - 30, 30, 20, 'spike', 4));
+      obstacles.push(new Obstacle(800, groundY - 50, 40, 20, 'jumpPad', 4));
+      obstacles.push(new Obstacle(900, groundY - 80, 50, 50, 'pendulum', 4));
+      obstacles.push(new Obstacle(1200, groundY - 40, 60, 20, 'movingPlatform', 4));
+      obstacles.push(new Obstacle(1400, groundY - 30, 40, 20, 'spike', 4));
+      obstacles.push(new Obstacle(1600, groundY - 60, 40, 20, 'jumpPad', 4));
+      obstacles.push(new Obstacle(1800, groundY - 90, 50, 50, 'pendulum', 4));
+      obstacles.push(new Obstacle(2100, groundY - 40, 60, 20, 'movingPlatform', 4));
+      obstacles.push(new Obstacle(2300, groundY - 30, 40, 20, 'spike', 4));
+      obstacles.push(new Obstacle(2500, groundY - 50, 40, 20, 'jumpPad', 4));
+      obstacles.push(new Obstacle(2700, groundY - 80, 50, 50, 'pendulum', 4));
+      obstacles.push(new Obstacle(3000, groundY - 40, 60, 20, 'movingPlatform', 4));
+      obstacles.push(new Obstacle(3200, groundY - 30, 40, 20, 'spike', 4));
+      obstacles.push(new Obstacle(3400, groundY - 60, 40, 20, 'jumpPad', 4));
+      obstacles.push(new Obstacle(3600, groundY - 90, 50, 50, 'pendulum', 4));
+      obstacles.push(new Obstacle(3800, groundY - 40, 60, 20, 'movingPlatform', 4));
+      break;
+      
+    case 5: // 新社会人 - 押しつぶす壁と電気バリア
+      obstacles.push(new Obstacle(500, groundY - 40, 60, 20, 'platform', 5));
+      obstacles.push(new Obstacle(700, 100, 20, 200, 'electric', 5));
+      obstacles.push(new Obstacle(900, groundY - 50, 70, 20, 'platform', 5));
+      obstacles.push(new Obstacle(1100, 150, 20, 150, 'electric', 5));
+      obstacles.push(new Obstacle(1300, groundY - 40, 60, 20, 'platform', 5));
+      obstacles.push(new Obstacle(1500, groundY - 60, 50, 80, 'hammer', 5));
+      obstacles.push(new Obstacle(1700, 120, 20, 180, 'electric', 5));
+      obstacles.push(new Obstacle(1900, groundY - 40, 60, 20, 'platform', 5));
+      obstacles.push(new Obstacle(2100, 100, 20, 200, 'electric', 5));
+      obstacles.push(new Obstacle(2300, groundY - 50, 70, 20, 'platform', 5));
+      obstacles.push(new Obstacle(2500, 150, 20, 150, 'electric', 5));
+      obstacles.push(new Obstacle(2700, groundY - 40, 60, 20, 'platform', 5));
+      obstacles.push(new Obstacle(2900, groundY - 60, 50, 80, 'hammer', 5));
+      obstacles.push(new Obstacle(3100, 120, 20, 180, 'electric', 5));
+      obstacles.push(new Obstacle(3300, groundY - 40, 60, 20, 'platform', 5));
+      obstacles.push(new Obstacle(3500, groundY - 60, 50, 80, 'hammer', 5));
+      obstacles.push(new Obstacle(3700, 100, 20, 200, 'electric', 5));
+      break;
+      
+    case 6: // サラリーマン - 複合的
+      obstacles.push(new Obstacle(400, groundY - 40, 60, 20, 'movingPlatform', 6));
+      obstacles.push(new Obstacle(600, 100, 20, 200, 'electric', 6));
+      obstacles.push(new Obstacle(800, groundY - 50, 40, 20, 'jumpPad', 6));
+      obstacles.push(new Obstacle(1000, groundY - 30, 40, 20, 'spike', 6));
+      obstacles.push(new Obstacle(1100, groundY - 60, 50, 80, 'hammer', 6));
+      obstacles.push(new Obstacle(1300, groundY - 40, 60, 20, 'movingPlatform', 6));
+      obstacles.push(new Obstacle(1500, 120, 20, 180, 'electric', 6));
+      obstacles.push(new Obstacle(1700, groundY - 30, 50, 20, 'spike', 6));
+      obstacles.push(new Obstacle(1800, groundY - 100, 50, 50, 'pendulum', 6));
+      obstacles.push(new Obstacle(2100, groundY - 40, 60, 20, 'movingPlatform', 6));
+      obstacles.push(new Obstacle(2300, 100, 20, 200, 'electric', 6));
+      obstacles.push(new Obstacle(2500, groundY - 50, 40, 20, 'jumpPad', 6));
+      obstacles.push(new Obstacle(2700, groundY - 30, 40, 20, 'spike', 6));
+      obstacles.push(new Obstacle(2900, groundY - 60, 50, 80, 'hammer', 6));
+      obstacles.push(new Obstacle(3100, groundY - 40, 60, 20, 'movingPlatform', 6));
+      obstacles.push(new Obstacle(3300, 120, 20, 180, 'electric', 6));
+      obstacles.push(new Obstacle(3500, groundY - 30, 50, 20, 'spike', 6));
+      obstacles.push(new Obstacle(3600, groundY - 100, 50, 50, 'pendulum', 6));
+      obstacles.push(new Obstacle(3800, groundY - 50, 40, 20, 'jumpPad', 6));
+      // 4000-6000ピクセル範囲の追加障害物
+      obstacles.push(new Obstacle(4000, groundY - 40, 60, 20, 'movingPlatform', 6));
+      obstacles.push(new Obstacle(4200, 100, 20, 200, 'electric', 6));
+      obstacles.push(new Obstacle(4400, groundY - 50, 40, 20, 'jumpPad', 6));
+      obstacles.push(new Obstacle(4600, groundY - 30, 50, 20, 'spike', 6));
+      obstacles.push(new Obstacle(4700, groundY - 60, 50, 80, 'hammer', 6));
+      obstacles.push(new Obstacle(4900, groundY - 40, 60, 20, 'movingPlatform', 6));
+      obstacles.push(new Obstacle(5100, 120, 20, 180, 'electric', 6));
+      obstacles.push(new Obstacle(5300, groundY - 30, 50, 20, 'spike', 6));
+      obstacles.push(new Obstacle(5400, groundY - 100, 50, 50, 'pendulum', 6));
+      obstacles.push(new Obstacle(5600, groundY - 40, 60, 20, 'movingPlatform', 6));
+      obstacles.push(new Obstacle(5800, 100, 20, 200, 'electric', 6));
+      break;
+      
+    case 7: // 勇者 - ファンタジー系
+      obstacles.push(new Obstacle(500, groundY - 20, 80, 20, 'lava', 7));
+      obstacles.push(new Obstacle(600, groundY - 60, 60, 20, 'platform', 7));
+      obstacles.push(new Obstacle(800, 150, 20, 150, 'laser', 7));
+      obstacles.push(new Obstacle(1000, groundY - 40, 60, 20, 'platform', 7));
+      obstacles.push(new Obstacle(1100, groundY - 20, 60, 20, 'lava', 7));
+      obstacles.push(new Obstacle(1300, 120, 20, 180, 'laser', 7));
+      obstacles.push(new Obstacle(1500, groundY - 60, 70, 20, 'platform', 7));
+      obstacles.push(new Obstacle(1700, groundY - 20, 100, 20, 'lava', 7));
+      obstacles.push(new Obstacle(1800, groundY - 90, 50, 50, 'pendulum', 7));
+      obstacles.push(new Obstacle(2100, groundY - 20, 80, 20, 'lava', 7));
+      obstacles.push(new Obstacle(2200, groundY - 60, 60, 20, 'platform', 7));
+      obstacles.push(new Obstacle(2400, 150, 20, 150, 'laser', 7));
+      obstacles.push(new Obstacle(2600, groundY - 40, 60, 20, 'platform', 7));
+      obstacles.push(new Obstacle(2800, groundY - 20, 60, 20, 'lava', 7));
+      obstacles.push(new Obstacle(3000, 120, 20, 180, 'laser', 7));
+      obstacles.push(new Obstacle(3200, groundY - 60, 70, 20, 'platform', 7));
+      obstacles.push(new Obstacle(3400, groundY - 20, 100, 20, 'lava', 7));
+      obstacles.push(new Obstacle(3500, groundY - 90, 50, 50, 'pendulum', 7));
+      obstacles.push(new Obstacle(3700, 130, 20, 170, 'laser', 7));
+      obstacles.push(new Obstacle(3800, groundY - 60, 80, 20, 'platform', 7));
+      // 4000-6000ピクセル範囲の追加障害物
+      obstacles.push(new Obstacle(4000, groundY - 20, 100, 20, 'lava', 7));
+      obstacles.push(new Obstacle(4100, groundY - 60, 70, 20, 'platform', 7));
+      obstacles.push(new Obstacle(4300, 150, 20, 150, 'laser', 7));
+      obstacles.push(new Obstacle(4500, groundY - 40, 60, 20, 'platform', 7));
+      obstacles.push(new Obstacle(4700, groundY - 20, 80, 20, 'lava', 7));
+      obstacles.push(new Obstacle(4900, 120, 20, 180, 'laser', 7));
+      obstacles.push(new Obstacle(5100, groundY - 60, 70, 20, 'platform', 7));
+      obstacles.push(new Obstacle(5300, groundY - 20, 100, 20, 'lava', 7));
+      obstacles.push(new Obstacle(5400, groundY - 90, 50, 50, 'pendulum', 7));
+      obstacles.push(new Obstacle(5600, 130, 20, 170, 'laser', 7));
+      obstacles.push(new Obstacle(5800, groundY - 60, 80, 20, 'platform', 7));
+      break;
+  }
+}
+
+// 敵クラス
+class Enemy {
+  constructor(x, y, type = 'normal', enemyType = 'normal', stageNum = 1) {
+    this.x = x;
+    this.y = y;
+    this.w = 30;
+    this.h = 30;
+    this.hp = type === 'boss' ? 50 : 10;
+    this.maxHp = this.hp;
+    this.vx = type === 'boss' ? 0 : -2;
+    this.vy = 0;
+    this.type = type; // 'normal' or 'boss'
+    this.enemyType = enemyType; // 'normal', 'jumping', 'flying', 'zigzag', 'fast', 'tracking', 'bouncing', 'hovering'
+    this.stageNum = stageNum; // ボスのステージ番号
+    this.shootTimer = 0;
+    this.timer = 0;
+    this.onGround = false;
+    this.originalY = y;
+    this.originalX = x;
+    this.jumpTimer = 0;
+    this.zigzagPhase = 0;
+    
+    // ボス専用の変数
+    if (type === 'boss') {
+      this.attackPhase = 0; // 攻撃パターンのフェーズ
+      this.attackTimer = 0; // 攻撃タイマー
+      this.movePattern = 0; // 移動パターン
+      this.teleportTimer = 0; // テレポートタイマー
+      this.dashTimer = 0; // 突進タイマー
+      this.dashDirection = 0; // 突進方向
+      this.dashCooldown = 0; // 突進クールダウン
+      this.originalX = x; // 初期X座標
+      this.originalY = y; // 初期Y座標
+      this.spiralAngle = 0; // 螺旋弾用の角度
+    }
+    
+    // タイプごとの初期化
+    if (enemyType === 'jumping') {
+      this.jumpPower = -10;
+      this.jumpTimer = 60 + Math.random() * 60;
+    } else if (enemyType === 'flying') {
+      this.vx = -1.5;
+      this.flySpeed = 1.5;
+      this.flyPhase = Math.random() * Math.PI * 2;
+    } else if (enemyType === 'zigzag') {
+      this.vx = -2;
+      this.zigzagSpeed = 0.1;
+      this.zigzagAmplitude = 30;
+    } else if (enemyType === 'fast') {
+      this.vx = -4;
+    } else if (enemyType === 'tracking') {
+      this.vx = -1.5;
+      this.trackingSpeed = 1;
+    } else if (enemyType === 'bouncing') {
+      this.vx = -2.5;
+      this.vy = -8;
+      this.bounceTimer = 0;
+    } else if (enemyType === 'hovering') {
+      this.vx = -1;
+      this.hoverPhase = Math.random() * Math.PI * 2;
+      this.hoverAmplitude = 20;
+    }
+  }
+
+  update() {
+    if (this.type === 'boss') {
+      // ボスの行動パターン（ステージごと）
+      this.timer++;
+      this.attackTimer++;
+      
+      // ステージごとの行動パターン
+      switch(this.stageNum) {
+        case 1:
+          this.updateBossStage1();
+          break;
+        case 2:
+          this.updateBossStage2();
+          break;
+        case 3:
+          this.updateBossStage3();
+          break;
+        case 4:
+          this.updateBossStage4();
+          break;
+        case 5:
+          this.updateBossStage5();
+          break;
+        case 6:
+          this.updateBossStage6();
+          break;
+        case 7:
+          this.updateBossStage7();
+          break;
+        default:
+          this.updateBossStage1();
+          break;
+      }
+    } else {
+      // 通常敵の動き（タイプごと）
+      this.timer++;
+      
+      switch(this.enemyType) {
+        case 'normal':
+          // 通常：左に移動
+          this.x += this.vx;
+          break;
+          
+        case 'jumping':
+          // ジャンプ敵：定期的にジャンプ
+          this.x += this.vx;
+          this.jumpTimer--;
+          
+          // 重力
+          if (!this.onGround) {
+            this.vy += 0.5;
+          }
+          
+          // 地面判定
+          const groundY = 350;
+          if (this.y + this.h >= groundY) {
+            this.y = groundY - this.h;
+            this.vy = 0;
+            this.onGround = true;
+            
+            // ジャンプ
+            if (this.jumpTimer <= 0) {
+              this.vy = this.jumpPower;
+              this.onGround = false;
+              this.jumpTimer = 80 + Math.random() * 60;
+            }
+          }
+          
+          this.y += this.vy;
+          break;
+          
+        case 'flying':
+          // 飛行敵：上下に浮遊しながら移動
+          this.x += this.vx;
+          this.flyPhase += 0.05;
+          this.y = this.originalY + Math.sin(this.flyPhase) * 40;
+          break;
+          
+        case 'zigzag':
+          // ジグザグ敵：上下にジグザグ移動
+          this.x += this.vx;
+          this.zigzagPhase += this.zigzagSpeed;
+          this.y = this.originalY + Math.sin(this.zigzagPhase) * this.zigzagAmplitude;
+          break;
+          
+        case 'fast':
+          // 高速敵：速く移動
+          this.x += this.vx;
+          break;
+          
+        case 'tracking':
+          // トラッキング敵：プレイヤーを追いかける（上下方向）
+          this.x += this.vx;
+          const playerCenterY = player.y + player.h / 2;
+          const enemyCenterY = this.y + this.h / 2;
+          if (playerCenterY > enemyCenterY + 5) {
+            this.y += this.trackingSpeed;
+          } else if (playerCenterY < enemyCenterY - 5) {
+            this.y -= this.trackingSpeed;
+          }
+          // 画面内に制限
+          if (this.y < 50) this.y = 50;
+          if (this.y + this.h > 340) this.y = 340 - this.h;
+          break;
+          
+        case 'bouncing':
+          // バウンス敵：跳ねながら移動
+          this.x += this.vx;
+          this.bounceTimer++;
+          
+          // 重力
+          this.vy += 0.3;
+          
+          // 地面で跳ね返る
+          const groundY2 = 350;
+          if (this.y + this.h >= groundY2) {
+            this.y = groundY2 - this.h;
+            this.vy = -8;
+          }
+          
+          this.y += this.vy;
+          break;
+          
+        case 'hovering':
+          // ホバー敵：浮遊して上下移動
+          this.x += this.vx;
+          this.hoverPhase += 0.08;
+          this.y = this.originalY + Math.sin(this.hoverPhase) * this.hoverAmplitude;
+          break;
+      }
+    }
+  }
+
+  // ボス攻撃パターン（ステージ1: 学級委員 - 単発ショット）
+  updateBossStage1() {
+    // ゆっくり上下移動
+    this.y = this.originalY + Math.sin(this.timer * 0.03) * 20;
+    
+    // 60フレームごとに単発ショット
+    if (this.attackTimer > 60) {
+      this.shootSingle();
+      this.attackTimer = 0;
+    }
+  }
+
+  // ボス攻撃パターン（ステージ2: 先輩 - 3WAY弾）
+  updateBossStage2() {
+    // 少し速く上下移動
+    this.y = this.originalY + Math.sin(this.timer * 0.04) * 30;
+    
+    // 50フレームごとに3WAY弾
+    if (this.attackTimer > 50) {
+      this.shoot3Way();
+      this.attackTimer = 0;
+    }
+  }
+
+  // ボス攻撃パターン（ステージ3: 番長 - 突進 + 3WAY弾）
+  updateBossStage3() {
+    // 突進パターン
+    this.dashCooldown--;
+    if (this.dashCooldown <= 0 && this.dashTimer <= 0) {
+      // 突進開始
+      this.dashTimer = 90;
+      this.dashDirection = player.x > this.x ? 1 : -1;
+      this.dashCooldown = 180;
+    }
+    
+    if (this.dashTimer > 0) {
+      // 突進中
+      this.x += this.dashDirection * 6;
+      this.dashTimer--;
+      // 画面端で停止
+      if (this.x < camera.x + 50 || this.x > camera.x + canvas.width - 110) {
+        this.dashTimer = 0;
+      }
+    } else {
+      // 通常時: 上下移動
+      this.y = this.originalY + Math.sin(this.timer * 0.04) * 25;
+    }
+    
+    // 40フレームごとに3WAY弾
+    if (this.attackTimer > 40) {
+      this.shoot3Way();
+      this.attackTimer = 0;
+    }
+  }
+
+  // ボス攻撃パターン（ステージ4: 教授 - 5WAY弾 + テレポート + 円形弾幕）
+  updateBossStage4() {
+    // テレポートパターン
+    this.teleportTimer++;
+    if (this.teleportTimer > 150) {
+      // ランダムな位置にテレポート
+      this.x = camera.x + 300 + Math.random() * 300;
+      this.y = 150 + Math.random() * 150;
+      this.originalY = this.y;
+      this.teleportTimer = 0;
+    }
+    
+    // ゆっくり移動
+    this.y = this.originalY + Math.sin(this.timer * 0.03) * 20;
+    
+    // 攻撃パターン切り替え
+    const pattern = Math.floor(this.attackTimer / 60) % 3;
+    if (this.attackTimer % 60 === 0) {
+      if (pattern === 0) {
+        this.shoot5Way();
+      } else if (pattern === 1) {
+        this.shootCircle();
+      } else {
+        this.shoot3Way();
+      }
+    }
+  }
+
+  // ボス攻撃パターン（ステージ5: 上司 - 全方位弾 + 突進 + 追尾弾）
+  updateBossStage5() {
+    // 突進パターン
+    this.dashCooldown--;
+    if (this.dashCooldown <= 0 && this.dashTimer <= 0) {
+      this.dashTimer = 60;
+      this.dashDirection = player.x > this.x ? 1 : -1;
+      this.dashCooldown = 120;
+    }
+    
+    if (this.dashTimer > 0) {
+      this.x += this.dashDirection * 8;
+      this.dashTimer--;
+      if (this.x < camera.x + 50 || this.x > camera.x + canvas.width - 110) {
+        this.dashTimer = 0;
+      }
+    } else {
+      this.y = this.originalY + Math.sin(this.timer * 0.05) * 35;
+    }
+    
+    // 攻撃パターン切り替え
+    const pattern = Math.floor(this.attackTimer / 45) % 3;
+    if (this.attackTimer % 45 === 0) {
+      if (pattern === 0) {
+        this.shootAllDirections();
+      } else if (pattern === 1) {
+        this.shootHoming();
+      } else {
+        this.shoot5Way();
+      }
+    }
+  }
+
+  // ボス攻撃パターン（ステージ6: 部長 - フェーズ変化）
+  updateBossStage6() {
+    const hpPercent = this.hp / this.maxHp;
+    
+    // HPに応じたフェーズ
+    if (hpPercent > 0.7) {
+      // フェーズ1: ゆっくり移動 + 3WAY弾
+      this.y = this.originalY + Math.sin(this.timer * 0.03) * 20;
+      if (this.attackTimer > 50) {
+        this.shoot3Way();
+        this.attackTimer = 0;
+      }
+    } else if (hpPercent > 0.4) {
+      // フェーズ2: 速く移動 + 5WAY弾 + 突進
+      this.y = this.originalY + Math.sin(this.timer * 0.05) * 30;
+      this.dashCooldown--;
+      if (this.dashCooldown <= 0 && this.dashTimer <= 0) {
+        this.dashTimer = 60;
+        this.dashDirection = player.x > this.x ? 1 : -1;
+        this.dashCooldown = 100;
+      }
+      if (this.dashTimer > 0) {
+        this.x += this.dashDirection * 7;
+        this.dashTimer--;
+        if (this.x < camera.x + 50 || this.x > camera.x + canvas.width - 110) {
+          this.dashTimer = 0;
+        }
+      }
+      if (this.attackTimer > 40) {
+        this.shoot5Way();
+        this.attackTimer = 0;
+      }
+    } else {
+      // フェーズ3: 超速移動 + 全方位弾幕 + 追尾弾
+      this.y = this.originalY + Math.sin(this.timer * 0.07) * 40;
+      this.dashCooldown--;
+      if (this.dashCooldown <= 0 && this.dashTimer <= 0) {
+        this.dashTimer = 45;
+        this.dashDirection = player.x > this.x ? 1 : -1;
+        this.dashCooldown = 80;
+      }
+      if (this.dashTimer > 0) {
+        this.x += this.dashDirection * 9;
+        this.dashTimer--;
+        if (this.x < camera.x + 50 || this.x > camera.x + canvas.width - 110) {
+          this.dashTimer = 0;
+        }
+      }
+      const pattern = Math.floor(this.attackTimer / 30) % 2;
+      if (this.attackTimer % 30 === 0) {
+        if (pattern === 0) {
+          this.shootAllDirections();
+        } else {
+          this.shootHoming();
+        }
+      }
+    }
+  }
+
+  // ボス攻撃パターン（ステージ7: 魔王 - 全方位弾幕 + 雑魚召喚 + 突進 + レーザー）
+  updateBossStage7() {
+    const hpPercent = this.hp / this.maxHp;
+    
+    // フェーズ1: 全方位 + 突進
+    if (hpPercent > 0.5) {
+      this.y = this.originalY + Math.sin(this.timer * 0.06) * 35;
+      this.dashCooldown--;
+      if (this.dashCooldown <= 0 && this.dashTimer <= 0) {
+        this.dashTimer = 50;
+        this.dashDirection = player.x > this.x ? 1 : -1;
+        this.dashCooldown = 90;
+      }
+      if (this.dashTimer > 0) {
+        this.x += this.dashDirection * 10;
+        this.dashTimer--;
+        if (this.x < camera.x + 50 || this.x > camera.x + canvas.width - 110) {
+          this.dashTimer = 0;
+        }
+      }
+      if (this.attackTimer > 35) {
+        this.shootAllDirections();
+        this.attackTimer = 0;
+      }
+    } else {
+      // フェーズ2: 全方位 + 雑魚召喚 + レーザー
+      this.teleportTimer++;
+      if (this.teleportTimer > 120) {
+        this.x = camera.x + 300 + Math.random() * 300;
+        this.y = 150 + Math.random() * 150;
+        this.originalY = this.y;
+        this.teleportTimer = 0;
+        // 雑魚召喚
+        this.summonMinions();
+      }
+      this.y = this.originalY + Math.sin(this.timer * 0.08) * 40;
+      const pattern = Math.floor(this.attackTimer / 25) % 3;
+      if (this.attackTimer % 25 === 0) {
+        if (pattern === 0) {
+          this.shootAllDirections();
+        } else if (pattern === 1) {
+          this.shootLaser();
+        } else {
+          this.shootCircle();
+        }
+      }
+    }
+  }
+
+  // 攻撃メソッド
+  shootSingle() {
+    const centerY = this.y + this.h / 2;
+    projectiles.push({
+      x: this.x,
+      y: centerY,
+      vx: -5,
+      vy: 0,
+      enemy: true,
+      w: 8,
+      h: 8
+    });
+  }
+
+  shoot3Way() {
+    const centerY = this.y + this.h / 2;
+    const angles = [-Math.PI / 6, 0, Math.PI / 6];
+    angles.forEach(angle => {
+      projectiles.push({
+        x: this.x,
+        y: centerY,
+        vx: -5 * Math.cos(angle),
+        vy: -5 * Math.sin(angle),
+        enemy: true,
+        w: 8,
+        h: 8
+      });
+    });
+  }
+
+  shoot5Way() {
+    const centerY = this.y + this.h / 2;
+    const angles = [-Math.PI / 3, -Math.PI / 6, 0, Math.PI / 6, Math.PI / 3];
+    angles.forEach(angle => {
+      projectiles.push({
+        x: this.x,
+        y: centerY,
+        vx: -6 * Math.cos(angle),
+        vy: -6 * Math.sin(angle),
+        enemy: true,
+        w: 8,
+        h: 8
+      });
+    });
+  }
+
+  shootCircle() {
+    const centerY = this.y + this.h / 2;
+    const bulletCount = 8;
+    for (let i = 0; i < bulletCount; i++) {
+      const angle = (Math.PI * 2 * i) / bulletCount;
+      projectiles.push({
+        x: this.x,
+        y: centerY,
+        vx: -4 * Math.cos(angle),
+        vy: -4 * Math.sin(angle),
+        enemy: true,
+        w: 8,
+        h: 8
+      });
+    }
+  }
+
+  shootAllDirections() {
+    const centerY = this.y + this.h / 2;
+    const bulletCount = 16;
+    for (let i = 0; i < bulletCount; i++) {
+      const angle = (Math.PI * 2 * i) / bulletCount;
+      projectiles.push({
+        x: this.x,
+        y: centerY,
+        vx: -5 * Math.cos(angle),
+        vy: -5 * Math.sin(angle),
+        enemy: true,
+        w: 8,
+        h: 8
+      });
+    }
+  }
+
+  shootHoming() {
+    const centerY = this.y + this.h / 2;
+    const dx = player.x - this.x;
+    const dy = (player.y + player.h / 2) - centerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const vx = (dx / dist) * -4;
+    const vy = (dy / dist) * -4;
+    projectiles.push({
+      x: this.x,
+      y: centerY,
+      vx: vx,
+      vy: vy,
+      enemy: true,
+      w: 8,
+      h: 8,
+      homing: true
+    });
+  }
+
+  shootLaser() {
+    const centerY = this.y + this.h / 2;
+    // 太いビーム
+    projectiles.push({
+      x: this.x,
+      y: centerY - 15,
+      vx: -8,
+      vy: 0,
+      enemy: true,
+      w: 20,
+      h: 30,
+      laser: true
+    });
+  }
+
+  summonMinions() {
+    // 雑魚を2体召喚
+    if (enemies.length < 3) {
+      enemies.push(new Enemy(camera.x + 800, 300, 'normal', 'normal', this.stageNum));
+      enemies.push(new Enemy(camera.x + 850, 320, 'normal', 'normal', this.stageNum));
+    }
+  }
+
+  shoot() {
+    // 後方互換性のため残す
+    this.shootSingle();
+  }
+
+  draw(stageNum) {
+    // SVG風描画関数を使用（ステージ×敵タイプごと）
+    drawEnemySVG(this.x, this.y, this.type, stageNum, this.enemyType);
+    
+    // HPバー（ボス用）
+    if (this.type === 'boss') {
+      const hpWidth = 80;
+      const hpPercent = this.hp / this.maxHp;
+      const px = this.x - camera.x;
+      
+      // HPバーの背景
+      ctx.fillStyle = '#000';
+      ctx.fillRect(px - 10, this.y - 15, hpWidth, 8);
+      // HPバーの枠
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px - 10, this.y - 15, hpWidth, 8);
+      // HPバー
+      ctx.fillStyle = hpPercent > 0.5 ? '#00FF00' : hpPercent > 0.25 ? '#FFFF00' : '#FF0000';
+      ctx.fillRect(px - 9, this.y - 14, (hpWidth - 2) * hpPercent, 6);
+    }
+  }
+}
+
+// 初期化
+function init() {
+  updateUI();
+  enemies = [];
+  projectiles = [];
+  items = [];
+  obstacles = [];
+  boss = null;
+  bossActive = false;
+  stageProgress = 0;
+  player.x = 100;
+  player.y = 300;
+  player.hp = player.maxHp;
+  player.vx = 0;
+  player.vy = 0;
+  camera.x = 0;
+  // 障害物生成
+  generateObstacles(gameState.stage);
+}
+
+// ゲーム開始
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  gameState.started = true;
+  init();
+  gameLoop();
+}
+
+// UI更新
+function updateUI() {
+  document.getElementById('stage').textContent = gameState.stage;
+  document.getElementById('stageName').textContent = stages[gameState.stage - 1].name;
+  document.getElementById('hp').textContent = player.hp;
+  document.getElementById('score').textContent = gameState.score;
+}
+
+// 更新処理
+function update() {
+  if (!gameState.started || gameState.paused) return;
+
+  // プレイヤー移動
+  player.vx = 0;
+  if (keys.left) player.vx = -player.speed;
+  if (keys.right) player.vx = player.speed;
+
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // 重力
+  if (!player.onGround) {
+    player.vy += 0.5;
+  }
+
+  // 障害物更新
+  obstacles.forEach(obs => obs.update());
+
+  // 地面判定と障害物（台）の上に乗る判定
+  const groundY = 350;
+  player.onGround = false;
+  
+  // 台の上に乗れるかチェック
+  for (let obs of obstacles) {
+    if (obs.type === 'platform' || obs.type === 'movingPlatform') {
+      // プレイヤーの足が台の上にあるか
+      if (player.x + player.w > obs.x && player.x < obs.x + obs.w &&
+          player.y + player.h >= obs.y && player.y + player.h < obs.y + 10 &&
+          player.vy >= 0) {
+        player.y = obs.y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+        // 動く台の場合は一緒に動く
+        if (obs.type === 'movingPlatform') {
+          player.x += obs.vx;
+        }
+      }
+    } else if (obs.type === 'jumpPad') {
+      // ジャンプ台の上にいる場合
+      if (player.x + player.w > obs.x && player.x < obs.x + obs.w &&
+          player.y + player.h >= obs.y && player.y + player.h < obs.y + 10 &&
+          player.vy >= 0) {
+        player.y = obs.y - player.h;
+        player.vy = -18; // 高く跳ぶ
+        player.onGround = false;
+      }
+    }
+  }
+  
+  // 地面判定
+  if (player.y + player.h >= groundY && !player.onGround) {
+    player.y = groundY - player.h;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  // ジャンプ
+  if (keys.jump && player.onGround) {
+    player.vy = -player.jumpPower;
+    player.onGround = false;
+  }
+
+  // 攻撃（スコアに応じてタイプが変わる）
+  if (player.attackCooldown > 0) player.attackCooldown--;
+  if (keys.attack && player.attackCooldown === 0) {
+    player.attacking = true;
+    const attackType = getAttackTypeByScore();
+    createPlayerProjectile(attackType);
+    keys.attack = false;
+  }
+
+  // 無敵時間
+  if (player.invincible > 0) player.invincible--;
+
+  // カメラ追従
+  camera.x = Math.max(0, player.x - 200);
+
+  // ステージ進行
+  if (!bossActive) {
+    stageProgress = Math.max(stageProgress, player.x);
+    
+    // 敵生成（ステージごとに固定タイプ）
+    enemySpawnTimer++;
+    if (enemySpawnTimer > 90 && enemies.length < 5) {
+      const spawnX = camera.x + 850;
+      const spawnY = groundY - 30;
+      
+      // ステージごとに固定の敵タイプ（順番に出現）
+      let enemyTypes = [];
+      switch(gameState.stage) {
+        case 1: // 小学生
+          enemyTypes = ['normal', 'jumping', 'hovering'];
+          break;
+        case 2: // 中学生
+          enemyTypes = ['normal', 'jumping', 'zigzag'];
+          break;
+        case 3: // 高校生
+          enemyTypes = ['normal', 'flying', 'bouncing'];
+          break;
+        case 4: // 大学生
+          enemyTypes = ['normal', 'fast', 'tracking'];
+          break;
+        case 5: // 新社会人
+          enemyTypes = ['normal', 'zigzag', 'fast'];
+          break;
+        case 6: // サラリーマン
+          enemyTypes = ['normal', 'tracking', 'bouncing'];
+          break;
+        case 7: // 勇者
+          enemyTypes = ['normal', 'flying', 'tracking'];
+          break;
+      }
+      
+      // 固定順序で出現（カウンターで順番に）
+      const selectedType = enemyTypes[enemySpawnCounter % enemyTypes.length];
+      enemies.push(new Enemy(spawnX, spawnY, 'normal', selectedType, gameState.stage));
+      enemySpawnCounter++;
+      enemySpawnTimer = 0;
+    }
+
+    // ボス出現（ステージごとの長さに応じて）
+    const currentStageLength = getStageLength(gameState.stage);
+    if (stageProgress > currentStageLength && !boss) {
+      bossActive = true;
+      boss = new Enemy(camera.x + 600, 200, 'boss', 'normal', gameState.stage);
+      boss.w = 60;
+      boss.h = 60;
+    }
+  }
+
+  // 敵更新
+  enemies = enemies.filter(e => {
+    e.update();
+    // 敵が倒された時に5%の確率で救急箱をドロップ
+    if (e.hp <= 0 && Math.random() < 0.05) {
+      items.push({
+        x: e.x + e.w / 2,
+        y: e.y + e.h / 2,
+        w: 20,
+        h: 20,
+        type: 'medkit',
+        floatTimer: 0,
+        collected: false
+      });
+    }
+    return e.x > camera.x - 100 && e.hp > 0;
+  });
+
+  if (boss) {
+    boss.update();
+    // ボスの位置を画面内に制限
+    if (boss.x < camera.x + 50) boss.x = camera.x + 50;
+    if (boss.x > camera.x + canvas.width - 110) boss.x = camera.x + canvas.width - 110;
+    if (boss.y < 50) boss.y = 50;
+    if (boss.y > 340) boss.y = 340;
+    // originalYも更新
+    if (boss.originalY < 50) boss.originalY = 50;
+    if (boss.originalY > 340) boss.originalY = 340;
+    
+    if (boss.hp <= 0) {
+      boss = null;
+      bossActive = false;
+      nextStage();
+    }
+  }
+
+  // 弾更新
+  projectiles = projectiles.filter(p => {
+    p.timer = (p.timer || 0) + 1;
+    
+    // タイプごとの特殊処理
+    if (!p.enemy && p.type) {
+      if (p.type === 'homing') {
+        // 追尾する雷弾：最も近い敵を追尾
+        let nearestEnemy = null;
+        let nearestDist = Infinity;
+        for (let e of enemies) {
+          const dist = Math.sqrt(Math.pow(e.x - p.x, 2) + Math.pow(e.y - p.y, 2));
+          if (dist < nearestDist) {
+            nearestDist = dist;
+            nearestEnemy = e;
+          }
+        }
+        if (boss) {
+          const dist = Math.sqrt(Math.pow(boss.x - p.x, 2) + Math.pow(boss.y - p.y, 2));
+          if (dist < nearestDist) {
+            nearestEnemy = boss;
+          }
+        }
+        if (nearestEnemy && nearestDist < 200) {
+          const dx = nearestEnemy.x + nearestEnemy.w / 2 - p.x;
+          const dy = nearestEnemy.y + nearestEnemy.h / 2 - p.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            p.vx = (dx / dist) * 8;
+            p.vy = (dy / dist) * 8;
+          }
+        }
+      }
+    } else if (p.enemy) {
+      // 敵の弾の特殊処理
+      if (p.homing) {
+        // 敵の追尾弾：プレイヤーを追尾
+        const dx = player.x + player.w / 2 - p.x;
+        const dy = player.y + player.h / 2 - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0 && dist < 400) {
+          const speed = 4;
+          p.vx = (dx / dist) * speed;
+          p.vy = (dy / dist) * speed;
+        }
+      }
+    }
+    
+    p.x += p.vx;
+    p.y += p.vy;
+    
+    // 画面外削除
+    if (p.x < camera.x - 50 || p.x > camera.x + 900) return false;
+    
+    // 当たり判定
+    if (!p.enemy) {
+      // プレイヤーの弾
+      let shouldRemove = false;
+      
+      if (p.type === 'exploding') {
+        // 爆発する炎弾：敵に当たったら範囲爆発
+        let hit = false;
+        for (let e of enemies) {
+          if (checkCollision(p, e)) {
+            hit = true;
+            break;
+          }
+        }
+        if (!hit && boss && checkCollision(p, boss)) {
+          hit = true;
+        }
+        if (hit) {
+          // 爆発範囲攻撃
+          for (let e of enemies) {
+            const dist = Math.sqrt(Math.pow(e.x + e.w/2 - p.x, 2) + Math.pow(e.y + e.h/2 - p.y, 2));
+            if (dist < p.explodeRadius) {
+              e.hp -= 10;
+              gameState.score += 15;
+            }
+          }
+          if (boss) {
+            const dist = Math.sqrt(Math.pow(boss.x + boss.w/2 - p.x, 2) + Math.pow(boss.y + boss.h/2 - p.y, 2));
+            if (dist < p.explodeRadius) {
+              boss.hp -= 8;
+              gameState.score += 10;
+            }
+          }
+          shouldRemove = true;
+        }
+      } else if (p.type === 'pierce') {
+        // 貫通する氷弾：複数の敵を貫通
+        let hitAny = false;
+        for (let e of enemies) {
+          if (checkCollision(p, e)) {
+            e.hp -= 8;
+            gameState.score += 12;
+            p.pierceCount = (p.pierceCount || 0) + 1;
+            hitAny = true;
+            if (p.pierceCount >= p.maxPierce) {
+              return false;
+            }
+          }
+        }
+        if (boss && checkCollision(p, boss)) {
+          boss.hp -= 5;
+          gameState.score += 8;
+          p.pierceCount = (p.pierceCount || 0) + 1;
+          if (p.pierceCount >= p.maxPierce) {
+            return false;
+          }
+        }
+      } else {
+        // 通常の当たり判定
+        for (let e of enemies) {
+          if (checkCollision(p, e)) {
+            const damage = p.type === 'fire' ? 7 : p.type === 'beam' ? 15 : p.type === 'homing' ? 6 : 5;
+            e.hp -= damage;
+            gameState.score += 10 + (p.type === 'beam' ? 5 : 0);
+            if (p.type !== 'pierce') {
+              shouldRemove = true;
+              break;
+            }
+          }
+        }
+        if (!shouldRemove && boss && checkCollision(p, boss)) {
+          const damage = p.type === 'fire' ? 5 : p.type === 'beam' ? 12 : p.type === 'homing' ? 6 : 3;
+          boss.hp -= damage;
+          gameState.score += 5 + (p.type === 'beam' ? 3 : 0);
+          if (p.type !== 'pierce') {
+            shouldRemove = true;
+          }
+        }
+      }
+      
+      if (shouldRemove) {
+        return false;
+      }
+    } else {
+      // 敵の弾
+      if (checkCollision(p, player) && player.invincible === 0) {
+        player.hp -= 10;
+        player.invincible = 60;
+        if (player.hp <= 0) gameOver();
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // プレイヤーと敵の衝突
+  for (let e of enemies) {
+    if (checkCollision(player, e) && player.invincible === 0) {
+      player.hp -= 5;
+      player.invincible = 60;
+      if (player.hp <= 0) gameOver();
+    }
+  }
+
+  if (boss && checkCollision(player, boss) && player.invincible === 0) {
+    player.hp -= 10;
+    player.invincible = 60;
+    if (player.hp <= 0) gameOver();
+  }
+
+  // アイテム更新と当たり判定
+  items = items.filter(item => {
+    if (item.collected) return false;
+    
+    // 浮遊アニメーション
+    item.floatTimer = (item.floatTimer || 0) + 1;
+    item.y = item.y + Math.sin(item.floatTimer * 0.1) * 0.5;
+    
+    // プレイヤーとの当たり判定
+    if (checkCollision(player, item)) {
+      if (item.type === 'medkit') {
+        // HP回復（最大HPを超えないように）
+        player.hp = Math.min(player.hp + 30, player.maxHp);
+        updateUI();
+        item.collected = true;
+        return false;
+      }
+    }
+    
+    // 画面外削除
+    if (item.x < camera.x - 100 || item.x > camera.x + 900) return false;
+    
+    return true;
+  });
+
+  // 障害物との衝突判定
+  for (let obs of obstacles) {
+    if (!obs.active) continue;
+    
+    // ダメージ系障害物
+    if (obs.type === 'spike' || obs.type === 'lava' || obs.type === 'electric' ||
+        obs.type === 'pendulum' || obs.type === 'fallingRock') {
+      if (checkCollision(player, obs) && player.invincible === 0) {
+        let damage = obs.damage;
+        if (obs.type === 'lava') damage = 20; // 溶岩は即死レベル
+        if (obs.type === 'fallingRock') damage = 15;
+        
+        player.hp -= damage;
+        player.invincible = 60;
+        if (player.hp <= 0) gameOver();
+      }
+    } else if (obs.type === 'laser') {
+      // レーザーはオン時のみダメージ
+      if (obs.laserOn && checkCollision(player, obs) && player.invincible === 0) {
+        player.hp -= obs.damage;
+        player.invincible = 60;
+        if (player.hp <= 0) gameOver();
+      }
+    } else if (obs.type === 'hammer') {
+      // ハンマーの当たり判定（動いている部分のみ）
+      const hammerObj = {
+        x: obs.originalX - 3,
+        y: obs.hammerY,
+        w: obs.w + 6,
+        h: obs.h
+      };
+      if (checkCollision(player, hammerObj) && player.invincible === 0) {
+        player.hp -= obs.damage;
+        player.invincible = 60;
+        if (player.hp <= 0) gameOver();
+      }
+    }
+  }
+
+  updateUI();
+}
+
+// 雲描画関数（8bit風）
+function drawCloud(x, y) {
+  const offset = x % 800;
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  // 雲の形状（複数の円を組み合わせて）
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(offset + i * 30, y, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(offset + 15, y + 10, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(offset + 45, y + 10, 12, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// ステージごとの背景要素描画
+function drawStageBackground(stageNum) {
+  switch(stageNum) {
+    case 1:
+      drawBackgroundStage1();
+      break;
+    case 2:
+      drawBackgroundStage2();
+      break;
+    case 3:
+      drawBackgroundStage3();
+      break;
+    case 4:
+      drawBackgroundStage4();
+      break;
+    case 5:
+      drawBackgroundStage5();
+      break;
+    case 6:
+      drawBackgroundStage6();
+      break;
+    case 7:
+      drawBackgroundStage7();
+      break;
+  }
+}
+
+// ステージ1: 小学生 - 校舎、電柱、木
+function drawBackgroundStage1() {
+  const paraX = camera.x * 0.3; // パララックス効果
+  
+  // 校舎（遠景、上部）
+  ctx.fillStyle = '#D3D3D3';
+  const schoolX = (paraX % 1200) - 200;
+  if (schoolX < canvas.width + 200) {
+    ctx.fillRect(schoolX, 80, 150, 100); // 建物本体
+    ctx.fillStyle = '#A9A9A9';
+    ctx.fillRect(schoolX, 80, 150, 5); // 屋根
+    // 窓
+    ctx.fillStyle = '#4169E1';
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 2; j++) {
+        ctx.fillRect(schoolX + 20 + i * 40, 100 + j * 30, 25, 20);
+      }
+    }
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(schoolX + 65, 145, 20, 30); // ドア
+  }
+  
+  // 電柱（右側）
+  ctx.fillStyle = '#654321';
+  const poleX = 750 - (paraX * 0.5) % 400;
+  ctx.fillRect(poleX, 150, 8, 200); // 柱
+  // 電線
+  ctx.fillStyle = '#333';
+  ctx.fillRect(0, 180, canvas.width, 2);
+  ctx.fillRect(0, 200, canvas.width, 2);
+  // 電球
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(poleX - 5, 180, 18, 12);
+  ctx.fillRect(poleX - 5, 200, 18, 12);
+  
+  // 木（左側、地面近く）
+  ctx.fillStyle = '#8B4513';
+  const treeX = (paraX * 0.4) % 600;
+  if (treeX < canvas.width + 50) {
+    ctx.fillRect(treeX, 280, 20, 70); // 幹
+    // 葉（円形）
+    ctx.fillStyle = '#228B22';
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(treeX + 10, 270 - i * 15, 25 - i * 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ステージ2: 中学生 - 中学校の校舎、自転車置き場、フェンス
+function drawBackgroundStage2() {
+  const paraX = camera.x * 0.3;
+  
+  // 中学校の校舎
+  ctx.fillStyle = '#C0C0C0';
+  const schoolX = (paraX % 1200) - 200;
+  if (schoolX < canvas.width + 200) {
+    ctx.fillRect(schoolX, 70, 180, 120);
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(schoolX, 70, 180, 8); // 屋根
+    // 階段
+    ctx.fillStyle = '#696969';
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(schoolX + 60, 185 + i * 5, 60, 5);
+    }
+    // 窓
+    ctx.fillStyle = '#4682B4';
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 2; j++) {
+        ctx.fillRect(schoolX + 20 + i * 35, 90 + j * 35, 25, 25);
+      }
+    }
+  }
+  
+  // 自転車置き場（遠景）
+  ctx.fillStyle = '#708090';
+  const bikeX = (paraX * 0.5) % 500;
+  if (bikeX < canvas.width + 100) {
+    // 柱
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(bikeX + i * 60, 200, 5, 80);
+    }
+    // 屋根
+    ctx.fillRect(bikeX - 5, 200, 130, 8);
+    // 格子
+    ctx.fillStyle = '#555';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(bikeX + i * 30, 200, 2, 80);
+    }
+  }
+  
+  // フェンス
+  ctx.fillStyle = '#8B7355';
+  for (let x = (-paraX * 0.4) % 60; x < canvas.width + 60; x += 60) {
+    ctx.fillRect(x, 240, 4, 60); // 縦の柱
+    ctx.fillRect(x - 30, 260, 64, 3); // 横の棒
+    ctx.fillRect(x - 30, 285, 64, 3);
+  }
+}
+
+// ステージ3: 高校生 - 街灯、看板、ビル群
+function drawBackgroundStage3() {
+  const paraX = camera.x * 0.3;
+  
+  // ビル群（遠景、上部）
+  ctx.fillStyle = '#1C1C1C';
+  const buildX1 = (paraX * 0.2) % 800;
+  ctx.fillRect(buildX1, 50, 80, 150); // ビル1
+  ctx.fillStyle = '#2F2F2F';
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 3; j++) {
+      ctx.fillRect(buildX1 + 10 + j * 25, 70 + i * 15, 15, 10); // 窓
+    }
+  }
+  
+  ctx.fillStyle = '#1C1C1C';
+  const buildX2 = (paraX * 0.2 + 150) % 800;
+  ctx.fillRect(buildX2, 40, 60, 160); // ビル2（高い）
+  ctx.fillStyle = '#2F2F2F';
+  for (let i = 0; i < 10; i++) {
+    for (let j = 0; j < 2; j++) {
+      ctx.fillRect(buildX2 + 10 + j * 25, 55 + i * 13, 15, 10);
+    }
+  }
+  
+  // 街灯（右側）
+  ctx.fillStyle = '#555';
+  const lampX = 780 - (paraX * 0.5) % 350;
+  ctx.fillRect(lampX, 160, 6, 190); // 柱
+  // ライト部分
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(lampX - 8, 160, 22, 15);
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(lampX - 6, 162, 18, 11);
+  // 光の効果
+  ctx.fillStyle = 'rgba(255,255,0,0.3)';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(lampX - 10 - i * 5, 175 + i * 10, 26 + i * 10, 8 - i * 2);
+  }
+  
+  // 看板（画面奥）
+  ctx.fillStyle = '#8B0000';
+  const signX = (paraX * 0.4) % 600;
+  if (signX < canvas.width + 80) {
+    ctx.fillRect(signX, 200, 100, 40); // 看板本体
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(signX + 5, 205, 90, 30); // 文字部分
+    // 柱
+    ctx.fillStyle = '#654321';
+    ctx.fillRect(signX + 45, 240, 10, 40);
+  }
+}
+
+// ステージ4: 大学生 - 大学の建物、図書館、ベンチ
+function drawBackgroundStage4() {
+  const paraX = camera.x * 0.3;
+  
+  // 大学の建物（円柱とドーム）
+  ctx.fillStyle = '#9370DB';
+  const univX = (paraX % 1400) - 200;
+  if (univX < canvas.width + 200) {
+    // 建物本体
+    ctx.fillRect(univX, 60, 200, 140);
+    // ドーム（上部）
+    ctx.beginPath();
+    ctx.arc(univX + 100, 60, 40, 0, Math.PI);
+    ctx.fill();
+    // 円柱
+    ctx.beginPath();
+    ctx.arc(univX + 50, 180, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(univX + 150, 180, 15, 0, Math.PI * 2);
+    ctx.fill();
+    // 窓
+    ctx.fillStyle = '#4B0082';
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 2; j++) {
+        ctx.fillRect(univX + 30 + i * 40, 90 + j * 40, 25, 25);
+      }
+    }
+  }
+  
+  // 図書館（大きな窓）
+  ctx.fillStyle = '#8B008B';
+  const libX = (paraX * 0.5 + 300) % 800;
+  if (libX < canvas.width + 150) {
+    ctx.fillRect(libX, 100, 120, 100);
+    // 大きな窓
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(libX + 10, 110, 100, 80);
+    ctx.fillStyle = '#8B008B';
+    // 窓の枠
+    ctx.fillRect(libX + 10, 145, 100, 4);
+    ctx.fillRect(libX + 55, 110, 4, 80);
+  }
+  
+  // ベンチ（遠景）
+  ctx.fillStyle = '#8B4513';
+  const benchX = (paraX * 0.4) % 500;
+  if (benchX < canvas.width + 100) {
+    // 座面
+    ctx.fillRect(benchX, 280, 80, 8);
+    // 背もたれ
+    ctx.fillRect(benchX + 5, 270, 70, 8);
+    // 脚
+    ctx.fillRect(benchX + 10, 288, 5, 15);
+    ctx.fillRect(benchX + 65, 288, 5, 15);
+  }
+}
+
+// ステージ5: 新社会人 - オフィスビル、信号機、バス停
+function drawBackgroundStage5() {
+  const paraX = camera.x * 0.3;
+  
+  // オフィスビル（高層、窓が規則的）
+  ctx.fillStyle = '#2F2F2F';
+  const officeX1 = (paraX * 0.2) % 700;
+  ctx.fillRect(officeX1, 30, 100, 320); // ビル1
+  ctx.fillStyle = '#FFD700';
+  // 窓（規則的に並ぶ）
+  for (let i = 0; i < 15; i++) {
+    for (let j = 0; j < 3; j++) {
+      if ((i + j) % 3 === 0) { // 点滅している窓
+        ctx.fillRect(officeX1 + 15 + j * 30, 50 + i * 18, 20, 12);
+      } else {
+        ctx.fillStyle = '#1C1C1C';
+        ctx.fillRect(officeX1 + 15 + j * 30, 50 + i * 18, 20, 12);
+        ctx.fillStyle = '#FFD700';
+      }
+    }
+  }
+  
+  ctx.fillStyle = '#2F2F2F';
+  const officeX2 = (paraX * 0.2 + 120) % 700;
+  ctx.fillRect(officeX2, 50, 80, 300); // ビル2
+  ctx.fillStyle = '#FFD700';
+  for (let i = 0; i < 13; i++) {
+    for (let j = 0; j < 2; j++) {
+      if ((i + j) % 2 === 0) {
+        ctx.fillRect(officeX2 + 20 + j * 30, 70 + i * 20, 18, 12);
+      } else {
+        ctx.fillStyle = '#1C1C1C';
+        ctx.fillRect(officeX2 + 20 + j * 30, 70 + i * 20, 18, 12);
+        ctx.fillStyle = '#FFD700';
+      }
+    }
+  }
+  
+  // 信号機（街角）
+  ctx.fillStyle = '#333';
+  const signalX = 750 - (paraX * 0.5) % 400;
+  ctx.fillRect(signalX, 180, 20, 70); // 柱
+  ctx.fillRect(signalX - 5, 180, 30, 40); // 信号機本体
+  // ライト
+  ctx.fillStyle = '#FF0000';
+  ctx.beginPath();
+  ctx.arc(signalX + 10, 195, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.arc(signalX + 10, 205, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#00FF00';
+  ctx.beginPath();
+  ctx.arc(signalX + 10, 215, 6, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // バス停（遠景）
+  ctx.fillStyle = '#555';
+  const busX = (paraX * 0.4) % 550;
+  if (busX < canvas.width + 100) {
+    // 屋根
+    ctx.fillRect(busX, 220, 100, 8);
+    // 柱
+    ctx.fillRect(busX, 220, 8, 50);
+    ctx.fillRect(busX + 92, 220, 8, 50);
+    // 看板
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(busX + 15, 235, 70, 25);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(busX + 20, 240, 60, 3);
+    ctx.fillRect(busX + 20, 250, 60, 3);
+  }
+}
+
+// ステージ6: サラリーマン - ネオンサイン、タワーマンション、コンビニ
+function drawBackgroundStage6() {
+  const paraX = camera.x * 0.3;
+  
+  // タワーマンション（高層、窓の光）
+  ctx.fillStyle = '#1C1C1C';
+  const towerX = (paraX * 0.2) % 600;
+  ctx.fillRect(towerX, 20, 120, 330); // タワー
+  ctx.fillStyle = '#FFD700';
+  // 窓（光っている）
+  for (let i = 0; i < 20; i++) {
+    for (let j = 0; j < 4; j++) {
+      if (Math.random() > 0.4) { // ランダムに光る
+        ctx.fillRect(towerX + 15 + j * 25, 40 + i * 15, 18, 10);
+      }
+    }
+  }
+  
+  // ネオンサイン（画面奥）
+  ctx.fillStyle = '#FF1493';
+  const neonX = (paraX * 0.5) % 500;
+  if (neonX < canvas.width + 120) {
+    // ネオンの文字（シンプルな矩形）
+    ctx.fillRect(neonX, 150, 20, 60); // 縦線1
+    ctx.fillRect(neonX + 25, 150, 20, 60); // 縦線2
+    ctx.fillRect(neonX, 150, 45, 12); // 横線1
+    ctx.fillRect(neonX, 198, 45, 12); // 横線2
+    ctx.fillRect(neonX, 246, 45, 12); // 横線3
+    // 光る効果
+    ctx.fillStyle = 'rgba(255,20,147,0.5)';
+    ctx.fillRect(neonX - 5, 145, 55, 70);
+  }
+  
+  // コンビニ（明るい看板）
+  ctx.fillStyle = '#FF4500';
+  const convX = (paraX * 0.4 + 200) % 600;
+  if (convX < canvas.width + 150) {
+    // 建物
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(convX, 200, 120, 80);
+    // 看板（明るい）
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(convX + 10, 205, 100, 20);
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(convX + 10, 230, 100, 3);
+    // 窓（ガラス）
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(convX + 15, 240, 90, 35);
+    // 明るさの効果
+    ctx.fillStyle = 'rgba(255,215,0,0.3)';
+    ctx.fillRect(convX - 10, 195, 140, 90);
+  }
+}
+
+// ステージ7: 勇者 - 古城、火柱、骸骨
+function drawBackgroundStage7() {
+  const paraX = camera.x * 0.3;
+  
+  // 古城・城壁（ファンタジー風）
+  ctx.fillStyle = '#4B0082';
+  const castleX = (paraX % 1200) - 200;
+  if (castleX < canvas.width + 200) {
+    // 城壁
+    ctx.fillRect(castleX, 80, 180, 120);
+    // 尖塔
+    ctx.fillRect(castleX + 20, 60, 30, 40);
+    ctx.fillRect(castleX + 130, 60, 30, 40);
+    // 塔の屋根
+    ctx.fillStyle = '#2F2F2F';
+    ctx.beginPath();
+    ctx.moveTo(castleX + 35, 60);
+    ctx.lineTo(castleX + 15, 45);
+    ctx.lineTo(castleX + 55, 45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(castleX + 145, 60);
+    ctx.lineTo(castleX + 125, 45);
+    ctx.lineTo(castleX + 165, 45);
+    ctx.closePath();
+    ctx.fill();
+    // 窓（光っている）
+    ctx.fillStyle = '#FF4500';
+    ctx.fillRect(castleX + 30, 110, 15, 20);
+    ctx.fillRect(castleX + 140, 110, 15, 20);
+    ctx.fillRect(castleX + 80, 130, 20, 30);
+  }
+  
+  // 火柱（揺れる炎）
+  ctx.fillStyle = '#FF4500';
+  const fireX = (paraX * 0.5) % 450;
+  if (fireX < canvas.width + 50) {
+    const fireY = 250 + Math.sin(Date.now() * 0.005 + fireX) * 10;
+    // 火柱の本体
+    ctx.fillRect(fireX, fireY, 15, 60);
+    // 炎のエフェクト（揺れる）
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(fireX - 3, fireY + 5, 21, 50);
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(fireX - 1, fireY + 10, 17, 40);
+    // 火花
+    for (let i = 0; i < 3; i++) {
+      const sparkX = fireX + 7 + Math.sin(Date.now() * 0.01 + i) * 8;
+      const sparkY = fireY - 5 - i * 10;
+      ctx.fillRect(sparkX, sparkY, 3, 3);
+    }
+  }
+  
+  // 骸骨（装飾）
+  ctx.fillStyle = '#FFF';
+  const skullX = (paraX * 0.4 + 300) % 550;
+  if (skullX < canvas.width + 50) {
+    // 頭蓋骨（シンプルな形）
+    ctx.beginPath();
+    ctx.arc(skullX, 180, 15, 0, Math.PI * 2);
+    ctx.fill();
+    // 目
+    ctx.fillStyle = '#000';
+    ctx.fillRect(skullX - 8, 175, 4, 4);
+    ctx.fillRect(skullX + 4, 175, 4, 4);
+    // 鼻
+    ctx.beginPath();
+    ctx.moveTo(skullX, 180);
+    ctx.lineTo(skullX - 3, 185);
+    ctx.lineTo(skullX + 3, 185);
+    ctx.closePath();
+    ctx.fill();
+    // 骨
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(skullX - 2, 195, 4, 30);
+    ctx.fillRect(skullX - 8, 200, 4, 20);
+    ctx.fillRect(skullX + 4, 200, 4, 20);
+  }
+}
+
+// SVG風精密描画関数（ステージごと）
+function drawPlayerSVG(x, y, invincible, stageNum) {
+  const px = x - camera.x;
+  const py = y;
+  const size = 1;
+  
+  if (invincible % 10 >= 5) return;
+  
+  // ステージごとに描画を分岐
+  switch(stageNum) {
+    case 1: // 小学生
+      drawPlayerStage1(px, py, size);
+      break;
+    case 2: // 中学生
+      drawPlayerStage2(px, py, size);
+      break;
+    case 3: // 高校生
+      drawPlayerStage3(px, py, size);
+      break;
+    case 4: // 大学生
+      drawPlayerStage4(px, py, size);
+      break;
+    case 5: // 新社会人
+      drawPlayerStage5(px, py, size);
+      break;
+    case 6: // サラリーマン
+      drawPlayerStage6(px, py, size);
+      break;
+    case 7: // 勇者
+      drawPlayerStage7(px, py, size);
+      break;
+  }
+}
+
+// ステージ1: 小学生（ランドセル）
+function drawPlayerStage1(px, py, size) {
+  // ランドセル（後ろ）
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(px + 6*size, py + 15*size, 18*size, 20*size);
+  ctx.fillStyle = '#654321';
+  ctx.fillRect(px + 6*size, py + 15*size, 18*size, 2*size);
+  ctx.fillRect(px + 6*size, py + 15*size, 2*size, 20*size);
+  ctx.fillRect(px + 22*size, py + 15*size, 2*size, 20*size);
+  
+  // 体（服）
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px + 8*size, py + 20*size, 14*size, 18*size);
+  ctx.fillStyle = '#1E90FF';
+  ctx.fillRect(px + 10*size, py + 20*size, 10*size, 3*size);
+  
+  // 首・頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 12*size, py + 23*size, 6*size, 3*size);
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 18*size);
+  
+  // 学生帽
+  ctx.fillStyle = '#000080';
+  ctx.fillRect(px + 8*size, py + 3*size, 14*size, 4*size);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 12*size, py + 4*size, 6*size, 1*size);
+  
+  // 髪
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(px + 8*size, py + 7*size, 14*size, 6*size);
+  ctx.fillRect(px + 6*size, py + 10*size, 18*size, 4*size);
+  
+  // 顔
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 12*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 12*size, 2*size, 2*size);
+  ctx.fillStyle = '#FF69B4';
+  ctx.fillRect(px + 13*size, py + 16*size, 4*size, 2*size);
+  
+  // 腕
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px + 3*size, py + 23*size, 6*size, 12*size);
+  ctx.fillRect(px + 21*size, py + 23*size, 6*size, 12*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 3*size, py + 33*size, 6*size, 4*size);
+  ctx.fillRect(px + 21*size, py + 33*size, 6*size, 4*size);
+  
+  // 足（半ズボン）
+  ctx.fillStyle = '#000080';
+  ctx.fillRect(px + 10*size, py + 38*size, 5*size, 2*size);
+  ctx.fillRect(px + 15*size, py + 38*size, 5*size, 2*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 9*size, py + 40*size, 7*size, 2*size);
+  ctx.fillRect(px + 14*size, py + 40*size, 7*size, 2*size);
+}
+
+// ステージ2: 中学生（自転車）
+function drawPlayerStage2(px, py, size) {
+  // 自転車のフレーム（簡略化）
+  ctx.fillStyle = '#333';
+  ctx.fillRect(px - 5*size, py + 35*size, 40*size, 3*size);
+  ctx.fillRect(px + 15*size, py + 25*size, 3*size, 15*size);
+  
+  // 体（学生服）
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 8*size, py + 20*size, 14*size, 18*size);
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 10*size, py + 20*size, 10*size, 3*size);
+  
+  // 首・頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 12*size, py + 23*size, 6*size, 3*size);
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 18*size);
+  
+  // 髪
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 8*size);
+  
+  // 顔
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 12*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 12*size, 2*size, 2*size);
+  
+  // 腕
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 3*size, py + 23*size, 6*size, 12*size);
+  ctx.fillRect(px + 21*size, py + 23*size, 6*size, 12*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 3*size, py + 33*size, 6*size, 4*size);
+  ctx.fillRect(px + 21*size, py + 33*size, 6*size, 4*size);
+  
+  // 足
+  ctx.fillStyle = '#000080';
+  ctx.fillRect(px + 10*size, py + 38*size, 5*size, 2*size);
+  ctx.fillRect(px + 15*size, py + 38*size, 5*size, 2*size);
+}
+
+// ステージ3: 高校生（学生服）
+function drawPlayerStage3(px, py, size) {
+  // 体（学生服、少し大きめ）
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 8*size, py + 18*size, 14*size, 20*size);
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 10*size, py + 18*size, 10*size, 4*size);
+  
+  // 首・頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 12*size, py + 22*size, 6*size, 3*size);
+  ctx.fillRect(px + 8*size, py + 4*size, 14*size, 18*size);
+  
+  // 髪（少し長め）
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(px + 8*size, py + 4*size, 14*size, 10*size);
+  
+  // 顔
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 12*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 12*size, 2*size, 2*size);
+  
+  // 腕
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 3*size, py + 23*size, 6*size, 12*size);
+  ctx.fillRect(px + 21*size, py + 23*size, 6*size, 12*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 3*size, py + 33*size, 6*size, 4*size);
+  ctx.fillRect(px + 21*size, py + 33*size, 6*size, 4*size);
+  
+  // 足
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 38*size, 5*size, 2*size);
+  ctx.fillRect(px + 15*size, py + 38*size, 5*size, 2*size);
+}
+
+// ステージ4: 大学生（カジュアル）
+function drawPlayerStage4(px, py, size) {
+  // 体（カジュアルな服）
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px + 8*size, py + 20*size, 14*size, 18*size);
+  
+  // 首・頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 12*size, py + 23*size, 6*size, 3*size);
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 18*size);
+  
+  // 髪（ふさふさ）
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 12*size);
+  
+  // 顔
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 12*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 12*size, 2*size, 2*size);
+  
+  // 腕
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px + 3*size, py + 23*size, 6*size, 12*size);
+  ctx.fillRect(px + 21*size, py + 23*size, 6*size, 12*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 3*size, py + 33*size, 6*size, 4*size);
+  ctx.fillRect(px + 21*size, py + 33*size, 6*size, 4*size);
+  
+  // 足（ジーンズ風）
+  ctx.fillStyle = '#0000CD';
+  ctx.fillRect(px + 10*size, py + 38*size, 5*size, 2*size);
+  ctx.fillRect(px + 15*size, py + 38*size, 5*size, 2*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 9*size, py + 40*size, 7*size, 2*size);
+  ctx.fillRect(px + 14*size, py + 40*size, 7*size, 2*size);
+}
+
+// ステージ5: 新社会人（スーツ）
+function drawPlayerStage5(px, py, size) {
+  // 体（スーツ上着）
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px + 8*size, py + 20*size, 14*size, 18*size);
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 13*size, py + 20*size, 4*size, 10*size); // シャツ
+  
+  // ネクタイ
+  ctx.fillStyle = '#8B0000';
+  ctx.fillRect(px + 13*size, py + 22*size, 4*size, 8*size);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 14*size, py + 26*size, 2*size, 2*size);
+  
+  // 首・頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 12*size, py + 23*size, 6*size, 3*size);
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 18*size);
+  
+  // 髪（整った）
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 8*size);
+  
+  // 顔
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 12*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 12*size, 2*size, 2*size);
+  
+  // 腕
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px + 3*size, py + 23*size, 6*size, 12*size);
+  ctx.fillRect(px + 21*size, py + 23*size, 6*size, 12*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 3*size, py + 33*size, 6*size, 4*size);
+  ctx.fillRect(px + 21*size, py + 33*size, 6*size, 4*size);
+  
+  // 足（スラックス）
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px + 10*size, py + 38*size, 5*size, 2*size);
+  ctx.fillRect(px + 15*size, py + 38*size, 5*size, 2*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 9*size, py + 40*size, 7*size, 2*size);
+  ctx.fillRect(px + 14*size, py + 40*size, 7*size, 2*size);
+}
+
+// ステージ6: サラリーマン（疲れた表情）
+function drawPlayerStage6(px, py, size) {
+  // 体（スーツ上着、しわしわ）
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 8*size, py + 20*size, 14*size, 18*size);
+  ctx.fillStyle = '#E0E0E0';
+  ctx.fillRect(px + 13*size, py + 20*size, 4*size, 10*size);
+  
+  // ネクタイ（緩んだ）
+  ctx.fillStyle = '#696969';
+  ctx.fillRect(px + 13*size, py + 22*size, 4*size, 8*size);
+  
+  // 首・頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 12*size, py + 23*size, 6*size, 3*size);
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 18*size);
+  
+  // 髪（ボサボサ）
+  ctx.fillStyle = '#4A4A4A';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 10*size);
+  
+  // 顔（疲れた表情）
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 12*size, 3*size, 1*size); // 半目の左
+  ctx.fillRect(px + 17*size, py + 12*size, 3*size, 1*size); // 半目の右
+  ctx.fillStyle = '#8B0000';
+  ctx.fillRect(px + 12*size, py + 15*size, 6*size, 1*size); // くま
+  
+  // 口（下がった）
+  ctx.fillStyle = '#333';
+  ctx.fillRect(px + 14*size, py + 18*size, 2*size, 2*size);
+  
+  // 腕
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 3*size, py + 23*size, 6*size, 12*size);
+  ctx.fillRect(px + 21*size, py + 23*size, 6*size, 12*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 3*size, py + 33*size, 6*size, 4*size);
+  ctx.fillRect(px + 21*size, py + 33*size, 6*size, 4*size);
+  
+  // 足
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 10*size, py + 38*size, 5*size, 2*size);
+  ctx.fillRect(px + 15*size, py + 38*size, 5*size, 2*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 9*size, py + 40*size, 7*size, 2*size);
+  ctx.fillRect(px + 14*size, py + 40*size, 7*size, 2*size);
+}
+
+// ステージ7: 勇者（装備）
+function drawPlayerStage7(px, py, size) {
+  // 盾（左側）
+  ctx.fillStyle = '#C0C0C0';
+  ctx.fillRect(px - 5*size, py + 25*size, 8*size, 15*size);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px - 3*size, py + 28*size, 4*size, 4*size);
+  
+  // 体（鎧）
+  ctx.fillStyle = '#C0C0C0';
+  ctx.fillRect(px + 8*size, py + 18*size, 14*size, 20*size);
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px + 10*size, py + 18*size, 10*size, 4*size); // 胸当て
+  
+  // 首・頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 12*size, py + 22*size, 6*size, 3*size);
+  ctx.fillRect(px + 8*size, py + 4*size, 14*size, 18*size);
+  
+  // 兜
+  ctx.fillStyle = '#C0C0C0';
+  ctx.fillRect(px + 8*size, py + 2*size, 14*size, 6*size);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 14*size, py + 1*size, 2*size, 2*size); // 飾り
+  
+  // 髪
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 8*size, py + 8*size, 14*size, 10*size);
+  
+  // 顔
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 12*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 12*size, 2*size, 2*size);
+  
+  // 腕（鎧）
+  ctx.fillStyle = '#C0C0C0';
+  ctx.fillRect(px + 3*size, py + 23*size, 6*size, 12*size);
+  ctx.fillRect(px + 21*size, py + 23*size, 6*size, 12*size);
+  
+  // 剣（右手）
+  ctx.fillStyle = '#C0C0C0';
+  ctx.fillRect(px + 25*size, py + 15*size, 2*size, 20*size);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 26*size, py + 13*size, 1*size, 4*size);
+  
+  // 足（鎧）
+  ctx.fillStyle = '#C0C0C0';
+  ctx.fillRect(px + 10*size, py + 38*size, 5*size, 2*size);
+  ctx.fillRect(px + 15*size, py + 38*size, 5*size, 2*size);
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(px + 9*size, py + 40*size, 7*size, 2*size);
+  ctx.fillRect(px + 14*size, py + 40*size, 7*size, 2*size);
+}
+
+function drawEnemySVG(x, y, type, stageNum, enemyType = 'normal') {
+  const px = x - camera.x;
+  const py = y;
+  const size = 1;
+  
+  if (type === 'boss') {
+    // ボスはステージごとに描画
+    switch(stageNum) {
+      case 1: drawBossStage1(px, py, size); break;
+      case 2: drawBossStage2(px, py, size); break;
+      case 3: drawBossStage3(px, py, size); break;
+      case 4: drawBossStage4(px, py, size); break;
+      case 5: drawBossStage5(px, py, size); break;
+      case 6: drawBossStage6(px, py, size); break;
+      case 7: drawBossStage7(px, py, size); break;
+    }
+    return;
+  } else {
+    // 通常敵はステージ×敵タイプごとに精密描画
+    drawEnemyByType(px, py, size, stageNum, enemyType);
+  }
+}
+
+// 通常敵の描画（ステージ×敵タイプごと）
+function drawEnemyByType(px, py, size, stageNum, enemyType) {
+  // ステージごとに基本描画を呼び出し、タイプごとに装飾を追加
+  switch(stageNum) {
+    case 1:
+      if (enemyType === 'normal') drawEnemyStage1Normal(px, py, size);
+      else if (enemyType === 'jumping') drawEnemyStage1Jumping(px, py, size);
+      else if (enemyType === 'hovering') drawEnemyStage1Hovering(px, py, size);
+      break;
+    case 2:
+      if (enemyType === 'normal') drawEnemyStage2Normal(px, py, size);
+      else if (enemyType === 'jumping') drawEnemyStage2Jumping(px, py, size);
+      else if (enemyType === 'zigzag') drawEnemyStage2Zigzag(px, py, size);
+      break;
+    case 3:
+      if (enemyType === 'normal') drawEnemyStage3Normal(px, py, size);
+      else if (enemyType === 'flying') drawEnemyStage3Flying(px, py, size);
+      else if (enemyType === 'bouncing') drawEnemyStage3Bouncing(px, py, size);
+      break;
+    case 4:
+      if (enemyType === 'normal') drawEnemyStage4Normal(px, py, size);
+      else if (enemyType === 'fast') drawEnemyStage4Fast(px, py, size);
+      else if (enemyType === 'tracking') drawEnemyStage4Tracking(px, py, size);
+      break;
+    case 5:
+      if (enemyType === 'normal') drawEnemyStage5Normal(px, py, size);
+      else if (enemyType === 'zigzag') drawEnemyStage5Zigzag(px, py, size);
+      else if (enemyType === 'fast') drawEnemyStage5Fast(px, py, size);
+      break;
+    case 6:
+      if (enemyType === 'normal') drawEnemyStage6Normal(px, py, size);
+      else if (enemyType === 'tracking') drawEnemyStage6Tracking(px, py, size);
+      else if (enemyType === 'bouncing') drawEnemyStage6Bouncing(px, py, size);
+      break;
+    case 7:
+      if (enemyType === 'normal') drawEnemyStage7Normal(px, py, size);
+      else if (enemyType === 'flying') drawEnemyStage7Flying(px, py, size);
+      else if (enemyType === 'tracking') drawEnemyStage7Tracking(px, py, size);
+      break;
+  }
+}
+
+// ステージ1: 小学生 - normal
+function drawEnemyStage1Normal(px, py, size) {
+  ctx.fillStyle = '#FFB6C1';
+  ctx.fillRect(px + 5*size, py + 5*size, 20*size, 25*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py, 14*size, 12*size);
+  ctx.fillStyle = '#000080';
+  ctx.fillRect(px + 8*size, py + 2*size, 14*size, 3*size); // 学生帽
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 5*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 5*size, 2*size, 2*size);
+}
+
+// ステージ1: 小学生 - jumping（犬）
+function drawEnemyStage1Jumping(px, py, size) {
+  // 犬の体
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(px + 8*size, py + 12*size, 14*size, 12*size);
+  // 犬の頭
+  ctx.fillRect(px + 6*size, py + 8*size, 18*size, 10*size);
+  // 耳（左）
+  ctx.fillRect(px + 4*size, py + 6*size, 6*size, 8*size);
+  // 耳（右）
+  ctx.fillRect(px + 20*size, py + 6*size, 6*size, 8*size);
+  // 口
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 14*size, 8*size, 4*size);
+  // 鼻
+  ctx.fillRect(px + 14*size, py + 12*size, 3*size, 3*size);
+  // 目
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 9*size, py + 10*size, 3*size, 3*size);
+  ctx.fillRect(px + 18*size, py + 10*size, 3*size, 3*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 11*size, 2*size, 2*size);
+  ctx.fillRect(px + 19*size, py + 11*size, 2*size, 2*size);
+  // 足
+  ctx.fillStyle = '#654321';
+  ctx.fillRect(px + 9*size, py + 24*size, 3*size, 6*size);
+  ctx.fillRect(px + 18*size, py + 24*size, 3*size, 6*size);
+  // しっぽ
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(px + 22*size, py + 18*size, 4*size, 6*size);
+}
+
+// ステージ1: 小学生 - hovering（カラス）
+function drawEnemyStage1Hovering(px, py, size) {
+  // カラスの体
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 10*size, 10*size, 12*size);
+  // カラスの頭
+  ctx.fillRect(px + 8*size, py + 6*size, 14*size, 8*size);
+  // くちばし
+  ctx.fillStyle = '#FFA500';
+  ctx.fillRect(px + 4*size, py + 8*size, 6*size, 2*size);
+  // 目
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 11*size, py + 8*size, 2*size, 2*size);
+  // 翼（左）
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px + 3*size, py + 12*size, 8*size, 8*size);
+  // 翼（右）
+  ctx.fillRect(px + 19*size, py + 12*size, 8*size, 8*size);
+  // 足
+  ctx.fillStyle = '#FFA500';
+  ctx.fillRect(px + 12*size, py + 22*size, 2*size, 4*size);
+  ctx.fillRect(px + 16*size, py + 22*size, 2*size, 4*size);
+}
+
+// ステージ2: 中学生 - normal
+function drawEnemyStage2Normal(px, py, size) {
+  ctx.fillStyle = '#FF4500';
+  ctx.fillRect(px + 5*size, py + 5*size, 20*size, 25*size);
+  ctx.fillStyle = '#FF6B6B';
+  ctx.fillRect(px + 8*size, py, 14*size, 12*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 4*size, 4*size, 4*size);
+  ctx.fillRect(px + 16*size, py + 4*size, 4*size, 4*size);
+}
+
+// ステージ2: 中学生 - jumping（おばさん）
+function drawEnemyStage2Jumping(px, py, size) {
+  // 体
+  ctx.fillStyle = '#FFB6C1';
+  ctx.fillRect(px + 8*size, py + 15*size, 14*size, 15*size);
+  // 頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 12*size);
+  // 髪
+  ctx.fillStyle = '#FF69B4';
+  ctx.fillRect(px + 6*size, py + 4*size, 18*size, 8*size);
+  ctx.fillRect(px + 8*size, py + 2*size, 14*size, 4*size);
+  // 目
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 8*size, 2*size, 2*size);
+  ctx.fillRect(px + 18*size, py + 8*size, 2*size, 2*size);
+  // 口
+  ctx.fillRect(px + 13*size, py + 12*size, 4*size, 2*size);
+  // エプロン
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 9*size, py + 18*size, 12*size, 10*size);
+  // バッグ
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(px + 3*size, py + 16*size, 6*size, 8*size);
+}
+
+// ステージ2: 中学生 - zigzag（爺さん）
+function drawEnemyStage2Zigzag(px, py, size) {
+  // 体
+  ctx.fillStyle = '#696969';
+  ctx.fillRect(px + 8*size, py + 15*size, 14*size, 15*size);
+  // 頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 12*size);
+  // 帽子
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(px + 7*size, py + 3*size, 16*size, 5*size);
+  // 白髪
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 10*size, py + 8*size, 10*size, 6*size);
+  // ヒゲ
+  ctx.fillRect(px + 9*size, py + 14*size, 12*size, 4*size);
+  // 目
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 9*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 9*size, 2*size, 2*size);
+  // 杖
+  ctx.fillStyle = '#654321';
+  ctx.fillRect(px - 2*size, py + 10*size, 2*size, 20*size);
+}
+
+// ステージ3: 高校生 - normal
+function drawEnemyStage3Normal(px, py, size) {
+  ctx.fillStyle = '#4B0082';
+  ctx.fillRect(px + 5*size, py + 5*size, 20*size, 25*size);
+  ctx.fillStyle = '#FF6B6B';
+  ctx.fillRect(px + 8*size, py, 14*size, 12*size);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 10*size, py + 4*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 4*size, 2*size, 2*size);
+}
+
+// ステージ3: 高校生 - flying（変質者）
+function drawEnemyStage3Flying(px, py, size) {
+  // 体
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 8*size, py + 15*size, 14*size, 15*size);
+  // 頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 12*size);
+  // マスク
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 7*size, py + 8*size, 16*size, 6*size);
+  // 目（赤く光る）
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 10*size, py + 9*size, 3*size, 3*size);
+  ctx.fillRect(px + 17*size, py + 9*size, 3*size, 3*size);
+  // フード
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px + 6*size, py + 3*size, 18*size, 6*size);
+  // コート
+  ctx.fillStyle = '#4B0082';
+  ctx.fillRect(px + 7*size, py + 18*size, 16*size, 12*size);
+}
+
+// ステージ3: 高校生 - bouncing（自転車の友人）
+function drawEnemyStage3Bouncing(px, py, size) {
+  // 自転車のフレーム
+  ctx.fillStyle = '#333';
+  ctx.fillRect(px - 5*size, py + 20*size, 40*size, 3*size);
+  ctx.fillRect(px + 15*size, py + 12*size, 3*size, 12*size);
+  // タイヤ（前）
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(px + 35*size, py + 25*size, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // タイヤ（後）
+  ctx.beginPath();
+  ctx.arc(px + 5*size, py + 25*size, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // 体（運転手）
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px + 10*size, py + 10*size, 10*size, 12*size);
+  // 頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 10*size, py + 3*size, 10*size, 9*size);
+  // ヘルメット
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 9*size, py + 1*size, 12*size, 4*size);
+  // 目
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 12*size, py + 6*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 6*size, 2*size, 2*size);
+}
+
+// ステージ4: 大学生 - normal
+function drawEnemyStage4Normal(px, py, size) {
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(px + 5*size, py + 5*size, 20*size, 25*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py, 14*size, 12*size);
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 8*size, py + 2*size, 14*size, 3*size); // エプロン風
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 5*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 5*size, 2*size, 2*size);
+}
+
+// ステージ4: 大学生 - fast（クレーマー）
+function drawEnemyStage4Fast(px, py, size) {
+  // 体
+  ctx.fillStyle = '#FF4500';
+  ctx.fillRect(px + 8*size, py + 15*size, 14*size, 15*size);
+  // 頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py + 5*size, 14*size, 12*size);
+  // 髪
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 7*size, py + 4*size, 16*size, 8*size);
+  // 怒った目
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 9*size, py + 7*size, 4*size, 1*size);
+  ctx.fillRect(px + 17*size, py + 7*size, 4*size, 1*size);
+  // 怒った眉毛
+  ctx.fillRect(px + 9*size, py + 6*size, 4*size, 1*size);
+  ctx.fillRect(px + 17*size, py + 6*size, 4*size, 1*size);
+  // 大きな口
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 11*size, py + 11*size, 8*size, 4*size);
+  // 指をさしている
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 22*size, py + 12*size, 4*size, 8*size);
+}
+
+// ステージ4: 大学生 - tracking（バイク）
+function drawEnemyStage4Tracking(px, py, size) {
+  // バイクのフレーム
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px, py + 20*size, 35*size, 4*size);
+  // タイヤ（前）
+  ctx.fillStyle = '#333';
+  ctx.beginPath();
+  ctx.arc(px + 30*size, py + 28*size, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(px + 30*size, py + 28*size, 7, 0, Math.PI * 2);
+  ctx.fill();
+  // タイヤ（後）
+  ctx.fillStyle = '#333';
+  ctx.beginPath();
+  ctx.arc(px + 8*size, py + 28*size, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(px + 8*size, py + 28*size, 7, 0, Math.PI * 2);
+  ctx.fill();
+  // 体（運転手）
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px + 12*size, py + 8*size, 10*size, 14*size);
+  // 頭
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 13*size, py + 2*size, 8*size, 8*size);
+  // ヘルメット
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 12*size, py, 10*size, 4*size);
+  // 目
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 15*size, py + 5*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 5*size, 2*size, 2*size);
+}
+
+// ステージ5: 新社会人 - normal
+function drawEnemyStage5Normal(px, py, size) {
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 5*size, py + 5*size, 20*size, 25*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py, 14*size, 12*size);
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px + 8*size, py + 2*size, 14*size, 3*size); // 帽子
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 10*size, py + 5*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 5*size, 2*size, 2*size);
+}
+
+// ステージ5: 新社会人 - zigzag（車）
+function drawEnemyStage5Zigzag(px, py, size) {
+  // 車体
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px, py + 15*size, 35*size, 12*size);
+  // 車の上
+  ctx.fillRect(px + 5*size, py + 8*size, 25*size, 8*size);
+  // フロントガラス
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(px + 8*size, py + 10*size, 8*size, 5*size);
+  // サイドガラス
+  ctx.fillRect(px + 18*size, py + 10*size, 6*size, 5*size);
+  // タイヤ（前）
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(px + 28*size, py + 27*size, 6, 0, Math.PI * 2);
+  ctx.fill();
+  // タイヤ（後）
+  ctx.beginPath();
+  ctx.arc(px + 8*size, py + 27*size, 6, 0, Math.PI * 2);
+  ctx.fill();
+  // ヘッドライト
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 33*size, py + 18*size, 3*size, 4*size);
+}
+
+// ステージ5: 新社会人 - fast（トラック）
+function drawEnemyStage5Fast(px, py, size) {
+  // トラックの荷台
+  ctx.fillStyle = '#FF4500';
+  ctx.fillRect(px, py + 12*size, 40*size, 15*size);
+  // 運転席
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 35*size, py + 8*size, 12*size, 12*size);
+  // フロントガラス
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(px + 38*size, py + 10*size, 6*size, 6*size);
+  // タイヤ（前）
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(px + 45*size, py + 27*size, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // タイヤ（後・複数）
+  ctx.beginPath();
+  ctx.arc(px + 12*size, py + 27*size, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(px + 20*size, py + 27*size, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // ヘッドライト
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 47*size, py + 14*size, 4*size, 6*size);
+}
+
+// ステージ6: サラリーマン - normal
+function drawEnemyStage6Normal(px, py, size) {
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px + 5*size, py + 5*size, 20*size, 25*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 8*size, py, 14*size, 12*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 8*size, py + 2*size, 14*size, 5*size); // マスク風
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 10*size, py + 5*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 5*size, 2*size, 2*size);
+}
+
+// ステージ6: サラリーマン - tracking（売上）
+function drawEnemyStage6Tracking(px, py, size) {
+  // 体（グラフのような形）
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 8*size, py + 15*size, 14*size, 15*size);
+  // グラフの棒
+  ctx.fillStyle = '#00FF00';
+  ctx.fillRect(px + 4*size, py + 20*size, 3*size, 10*size);
+  ctx.fillStyle = '#FFFF00';
+  ctx.fillRect(px + 8*size, py + 15*size, 3*size, 15*size);
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 12*size, py + 10*size, 3*size, 20*size);
+  ctx.fillStyle = '#0000FF';
+  ctx.fillRect(px + 16*size, py + 18*size, 3*size, 12*size);
+  ctx.fillStyle = '#FF00FF';
+  ctx.fillRect(px + 20*size, py + 12*size, 3*size, 18*size);
+  // 顔
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 10*size, py + 5*size, 10*size, 8*size);
+  // プレゼンボード
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 22*size, py + 8*size, 8*size, 12*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 24*size, py + 10*size, 4*size, 1*size);
+  ctx.fillRect(px + 24*size, py + 13*size, 4*size, 1*size);
+  // 目
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 12*size, py + 7*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 7*size, 2*size, 2*size);
+}
+
+// ステージ6: サラリーマン - bouncing（ウイルス）
+function drawEnemyStage6Bouncing(px, py, size) {
+  // ウイルスの本体（球体）
+  ctx.fillStyle = '#00FF00';
+  ctx.beginPath();
+  ctx.arc(px + 15*size, py + 15*size, 12, 0, Math.PI * 2);
+  ctx.fill();
+  // 突起（スパイク）
+  ctx.fillStyle = '#00AA00';
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const x = px + 15*size + Math.cos(angle) * 12;
+    const y = py + 15*size + Math.sin(angle) * 12;
+    ctx.fillRect(x - 1, y - 1, 3, 8);
+  }
+  // 目
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 12*size, py + 13*size, 3*size, 3*size);
+  ctx.fillRect(px + 15*size, py + 13*size, 3*size, 3*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 13*size, py + 14*size, 1*size, 1*size);
+  ctx.fillRect(px + 16*size, py + 14*size, 1*size, 1*size);
+  // 口
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 13*size, py + 17*size, 4*size, 2*size);
+}
+
+// ステージ7: 勇者 - normal
+function drawEnemyStage7Normal(px, py, size) {
+  ctx.fillStyle = '#8B0000';
+  ctx.fillRect(px + 5*size, py + 5*size, 20*size, 25*size);
+  ctx.fillStyle = '#4B0082';
+  ctx.fillRect(px + 8*size, py, 14*size, 12*size);
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 10*size, py + 4*size, 2*size, 2*size);
+  ctx.fillRect(px + 16*size, py + 4*size, 2*size, 2*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 12*size, py + 8*size, 6*size, 3*size); // 大きな口
+}
+
+// ステージ7: 勇者 - flying（ガーゴイル）
+function drawEnemyStage7Flying(px, py, size) {
+  // ガーゴイルの体
+  ctx.fillStyle = '#696969';
+  ctx.fillRect(px + 8*size, py + 12*size, 14*size, 18*size);
+  // 頭
+  ctx.fillRect(px + 7*size, py + 4*size, 16*size, 10*size);
+  // 角
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px + 6*size, py + 2*size, 3*size, 4*size);
+  ctx.fillRect(px + 21*size, py + 2*size, 3*size, 4*size);
+  // 翼（大きな翼）
+  ctx.fillStyle = '#4B0082';
+  ctx.fillRect(px - 8*size, py + 8*size, 8*size, 16*size);
+  ctx.fillRect(px + 25*size, py + 8*size, 8*size, 16*size);
+  // 翼の縁
+  ctx.fillStyle = '#8B0000';
+  ctx.fillRect(px - 8*size, py + 8*size, 8*size, 2*size);
+  ctx.fillRect(px + 25*size, py + 8*size, 8*size, 2*size);
+  // 目（赤く光る）
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 10*size, py + 7*size, 3*size, 3*size);
+  ctx.fillRect(px + 17*size, py + 7*size, 3*size, 3*size);
+  // 口
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 11*size, py + 12*size, 8*size, 4*size);
+  // 牙
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 10*size, py + 13*size, 2*size, 3*size);
+  ctx.fillRect(px + 18*size, py + 13*size, 2*size, 3*size);
+}
+
+// ステージ7: 勇者 - tracking（スライム）
+function drawEnemyStage7Tracking(px, py, size) {
+  // スライムの本体（丸い）
+  ctx.fillStyle = '#00FF00';
+  ctx.beginPath();
+  ctx.arc(px + 15*size, py + 20*size, 12, 0, Math.PI * 2);
+  ctx.fill();
+  // スライムの上部（波打つ）
+  ctx.fillStyle = '#32CD32';
+  ctx.fillRect(px + 5*size, py + 12*size, 20*size, 8*size);
+  ctx.beginPath();
+  ctx.arc(px + 15*size, py + 12*size, 10, 0, Math.PI * 2);
+  ctx.fill();
+  // 目（大きく光る）
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 10*size, py + 14*size, 5*size, 5*size);
+  ctx.fillRect(px + 15*size, py + 14*size, 5*size, 5*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 12*size, py + 16*size, 2*size, 2*size);
+  ctx.fillRect(px + 17*size, py + 16*size, 2*size, 2*size);
+  // 口
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 12*size, py + 20*size, 6*size, 3*size);
+  // 水滴エフェクト
+  ctx.fillStyle = 'rgba(0,255,0,0.5)';
+  ctx.fillRect(px + 3*size, py + 24*size, 3*size, 4*size);
+  ctx.fillRect(px + 24*size, py + 22*size, 2*size, 3*size);
+}
+
+// ボスの描画（ステージごと）
+function drawBossStage1(px, py, size) {
+  // ステージ1: 学級委員（60x60）
+  ctx.fillStyle = '#4169E1';
+  ctx.fillRect(px, py + 10*size, 60*size, 50*size);
+  ctx.fillStyle = '#1E90FF';
+  ctx.fillRect(px + 10*size, py + 10*size, 40*size, 6*size); // 腕章
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 15*size, py, 30*size, 25*size);
+  ctx.fillStyle = '#000080';
+  ctx.fillRect(px + 15*size, py - 2*size, 30*size, 5*size); // 帽子
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 20*size, py, 20*size, 1*size); // バッジ
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 20*size, py + 8*size, 4*size, 4*size);
+  ctx.fillRect(px + 36*size, py + 8*size, 4*size, 4*size);
+}
+
+function drawBossStage2(px, py, size) {
+  // ステージ2: 先輩（60x60）
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px, py + 10*size, 60*size, 50*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 15*size, py, 30*size, 25*size);
+  ctx.fillStyle = '#FF4500';
+  ctx.fillRect(px + 15*size, py + 2*size, 30*size, 5*size); // バンダナ
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 18*size, py + 8*size, 6*size, 6*size);
+  ctx.fillRect(px + 36*size, py + 8*size, 6*size, 6*size);
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 12*size, py + 25*size, 36*size, 8*size); // 腕章
+}
+
+function drawBossStage3(px, py, size) {
+  // ステージ3: 番長（60x60）
+  ctx.fillStyle = '#8B0000';
+  ctx.fillRect(px, py + 10*size, 60*size, 50*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 15*size, py, 30*size, 25*size);
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 15*size, py - 2*size, 30*size, 6*size); // 金髪
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 18*size, py + 8*size, 6*size, 6*size);
+  ctx.fillRect(px + 36*size, py + 8*size, 6*size, 6*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 22*size, py + 18*size, 16*size, 4*size); // 大きな口
+}
+
+function drawBossStage4(px, py, size) {
+  // ステージ4: 教授（60x60）
+  // 学者らしい落ち着いたダークグレーのスーツ
+  ctx.fillStyle = '#2F2F2F';
+  ctx.fillRect(px, py + 10*size, 60*size, 50*size);
+  // スーツの縁取り
+  ctx.fillStyle = '#1C1C1C';
+  ctx.fillRect(px, py + 10*size, 60*size, 2*size);
+  ctx.fillRect(px, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px + 58*size, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px, py + 58*size, 60*size, 2*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 15*size, py, 30*size, 25*size);
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 15*size, py - 1*size, 30*size, 8*size); // 白髪・ヒゲ
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 18*size, py + 8*size, 6*size, 6*size); // メガネ
+  ctx.fillRect(px + 36*size, py + 8*size, 6*size, 6*size);
+  ctx.fillStyle = '#C0C0C0';
+  ctx.fillRect(px + 20*size, py + 6*size, 20*size, 2*size); // メガネのフレーム
+}
+
+function drawBossStage5(px, py, size) {
+  // ステージ5: 上司（60x60）
+  // 黒スーツだが背景と区別するため濃いグレーに
+  ctx.fillStyle = '#333333';
+  ctx.fillRect(px, py + 10*size, 60*size, 50*size);
+  // スーツの縁取り（濃い紺で高級感）
+  ctx.fillStyle = '#000033';
+  ctx.fillRect(px, py + 10*size, 60*size, 2*size);
+  ctx.fillRect(px, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px + 58*size, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px, py + 58*size, 60*size, 2*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 15*size, py, 30*size, 25*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 15*size, py - 1*size, 30*size, 5*size); // 髪
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 10*size, py + 15*size, 40*size, 6*size); // ネクタイ
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 18*size, py + 8*size, 4*size, 4*size);
+  ctx.fillRect(px + 38*size, py + 8*size, 4*size, 4*size);
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 20*size, py + 12*size, 20*size, 2*size); // 怒った眉毛
+}
+
+function drawBossStage6(px, py, size) {
+  // ステージ6: 部長（60x60）
+  // 最高級の濃い紺色のスーツで高級感を表現
+  ctx.fillStyle = '#000066';
+  ctx.fillRect(px, py + 10*size, 60*size, 50*size);
+  // スーツの縁取り（金色で豪華に）
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px, py + 10*size, 60*size, 2*size);
+  ctx.fillRect(px, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px + 58*size, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px, py + 58*size, 60*size, 2*size);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fillRect(px + 15*size, py, 30*size, 25*size);
+  ctx.fillStyle = '#FFF';
+  ctx.fillRect(px + 15*size, py - 1*size, 30*size, 8*size); // 白髪
+  ctx.fillStyle = '#8B0000';
+  ctx.fillRect(px + 10*size, py + 18*size, 40*size, 8*size); // ネクタイ
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 20*size, py + 20*size, 20*size, 2*size); // ネクタイピン
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 18*size, py + 8*size, 6*size, 6*size);
+  ctx.fillRect(px + 36*size, py + 8*size, 6*size, 6*size);
+}
+
+function drawBossStage7(px, py, size) {
+  // ステージ7: 魔王（60x60）
+  ctx.fillStyle = '#8B0000';
+  ctx.fillRect(px, py + 10*size, 60*size, 50*size);
+  ctx.fillStyle = '#5A0000';
+  ctx.fillRect(px, py + 10*size, 60*size, 2*size);
+  ctx.fillRect(px, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px + 58*size, py + 10*size, 2*size, 50*size);
+  ctx.fillRect(px, py + 58*size, 60*size, 2*size);
+  ctx.fillStyle = '#FF6B6B';
+  ctx.fillRect(px + 15*size, py, 30*size, 25*size);
+  ctx.fillStyle = '#4B0082';
+  ctx.fillRect(px + 12*size, py - 3*size, 36*size, 10*size); // 角
+  ctx.fillStyle = '#FF0000';
+  ctx.fillRect(px + 18*size, py + 8*size, 8*size, 8*size);
+  ctx.fillRect(px + 34*size, py + 8*size, 8*size, 8*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 20*size, py + 10*size, 4*size, 4*size);
+  ctx.fillRect(px + 36*size, py + 10*size, 4*size, 4*size);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(px + 22*size, py + 18*size, 16*size, 6*size); // 大きな口
+  ctx.fillStyle = '#FFD700';
+  ctx.fillRect(px + 10*size, py + 25*size, 40*size, 10*size); // 装飾
+}
+
+// スコアに基づいて攻撃タイプを取得
+function getAttackTypeByScore() {
+  const scoreLevel = Math.floor(gameState.score / 1000);
+  // 0-5の範囲に制限（6種類の攻撃タイプ）
+  return Math.min(scoreLevel, 5);
+}
+
+// プレイヤーの弾を生成（タイプごと）
+function createPlayerProjectile(attackType) {
+  const baseX = player.x + player.w;
+  const baseY = player.y + player.h / 2;
+  
+  switch(attackType) {
+    case 0: // 光る弾
+      player.attackCooldown = 20;
+      projectiles.push({
+        x: baseX,
+        y: baseY,
+        vx: 8,
+        vy: 0,
+        enemy: false,
+        type: 'light',
+        w: 12,
+        h: 6,
+        timer: 0
+      });
+      break;
+      
+    case 1: // 炎の弾
+      player.attackCooldown = 18;
+      projectiles.push({
+        x: baseX,
+        y: baseY,
+        vx: 9,
+        vy: 0,
+        enemy: false,
+        type: 'fire',
+        w: 14,
+        h: 8,
+        timer: 0
+      });
+      break;
+      
+    case 2: // 爆発する炎弾
+      player.attackCooldown = 25;
+      projectiles.push({
+        x: baseX,
+        y: baseY,
+        vx: 7,
+        vy: 0,
+        enemy: false,
+        type: 'exploding',
+        w: 16,
+        h: 10,
+        timer: 0,
+        explodeRadius: 40
+      });
+      break;
+      
+    case 3: // 追尾する雷弾
+      player.attackCooldown = 22;
+      projectiles.push({
+        x: baseX,
+        y: baseY,
+        vx: 8,
+        vy: 0,
+        enemy: false,
+        type: 'homing',
+        w: 12,
+        h: 12,
+        timer: 0,
+        target: null
+      });
+      break;
+      
+    case 4: // 貫通する氷弾
+      player.attackCooldown = 15;
+      projectiles.push({
+        x: baseX,
+        y: baseY,
+        vx: 10,
+        vy: 0,
+        enemy: false,
+        type: 'pierce',
+        w: 15,
+        h: 10,
+        timer: 0,
+        pierceCount: 0,
+        maxPierce: 3
+      });
+      break;
+      
+    case 5: // 虹色の極太ビーム
+      player.attackCooldown = 40;
+      projectiles.push({
+        x: baseX,
+        y: baseY - 15,
+        vx: 12,
+        vy: 0,
+        enemy: false,
+        type: 'beam',
+        w: 30,
+        h: 30,
+        timer: 0
+      });
+      break;
+  }
+}
+
+function drawProjectileSVG(x, y, enemy, projectile = null) {
+  const px = x - camera.x;
+  const py = y;
+  const size = 1;
+  
+  if (enemy) {
+    // 敵の弾（タイプごとに描画）
+    if (projectile && projectile.laser) {
+      // レーザー（太いビーム）
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(px, py, projectile.w || 20, projectile.h || 30);
+      ctx.fillStyle = '#FF6B6B';
+      ctx.fillRect(px + 2, py + 2, (projectile.w || 20) - 4, (projectile.h || 30) - 4);
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(px + 4, py + 4, (projectile.w || 20) - 8, (projectile.h || 30) - 8);
+    } else if (projectile && projectile.homing) {
+      // 追尾弾（青い光る弾）
+      ctx.fillStyle = '#00BFFF';
+      ctx.beginPath();
+      ctx.arc(px + 4, py + 4, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#87CEEB';
+      ctx.beginPath();
+      ctx.arc(px + 4, py + 4, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(px + 4, py + 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // 通常の敵の弾（赤い火の玉）
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.arc(px + 4, py + 4, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FF6B6B';
+      ctx.beginPath();
+      ctx.arc(px + 4, py + 4, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(px + 4, py + 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (projectile) {
+    // プレイヤーの弾（タイプごとに描画）
+    drawPlayerProjectile(px, py, projectile);
+  } else {
+    // フォールバック（旧タイプ）
+    ctx.fillStyle = '#FFFF00';
+    ctx.beginPath();
+    ctx.arc(px + 6, py + 3, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// プレイヤーの弾を描画（タイプごと）
+function drawPlayerProjectile(px, py, p) {
+  p.timer = (p.timer || 0) + 1;
+  
+  switch(p.type) {
+    case 'light':
+      // 光る弾
+      ctx.fillStyle = '#FFFF00';
+      ctx.beginPath();
+      ctx.arc(px + 6, py + 3, 5 + Math.sin(p.timer * 0.3) * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFE4B5';
+      ctx.beginPath();
+      ctx.arc(px + 6, py + 3, 4 + Math.sin(p.timer * 0.3) * 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(px + 6, py + 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+      
+    case 'fire':
+      // 炎の弾
+      ctx.fillStyle = '#FF4500';
+      ctx.beginPath();
+      ctx.arc(px + 7, py + 4, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.arc(px + 7, py + 4, 5, 0, Math.PI * 2);
+      ctx.fill();
+      // 炎のエフェクト
+      ctx.fillStyle = '#FFD700';
+      for (let i = 0; i < 3; i++) {
+        const offsetX = Math.sin(p.timer * 0.2 + i * 2) * 3;
+        const offsetY = Math.cos(p.timer * 0.2 + i * 2) * 2;
+        ctx.fillRect(px + 5 + offsetX, py + 2 + offsetY, 4, 4);
+      }
+      break;
+      
+    case 'exploding':
+      // 爆発する炎弾
+      ctx.fillStyle = '#FF4500';
+      ctx.beginPath();
+      ctx.arc(px + 8, py + 5, 8 + Math.sin(p.timer * 0.4) * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.arc(px + 8, py + 5, 6 + Math.sin(p.timer * 0.4) * 1, 0, Math.PI * 2);
+      ctx.fill();
+      // 爆発の予兆エフェクト
+      ctx.fillStyle = 'rgba(255,215,0,0.5)';
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const r = 12 + Math.sin(p.timer * 0.3) * 3;
+        ctx.fillRect(px + 8 + Math.cos(angle) * r, py + 5 + Math.sin(angle) * r, 2, 2);
+      }
+      break;
+      
+    case 'homing':
+      // 追尾する雷弾
+      ctx.fillStyle = '#4169E1';
+      ctx.beginPath();
+      ctx.arc(px + 6, py + 6, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#00FFFF';
+      ctx.beginPath();
+      ctx.arc(px + 6, py + 6, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // 雷のエフェクト
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(px + 2, py + 2 + i * 3);
+        ctx.lineTo(px + 10, py + 4 + i * 3);
+        ctx.stroke();
+      }
+      break;
+      
+    case 'pierce':
+      // 貫通する氷弾
+      ctx.fillStyle = '#87CEEB';
+      ctx.beginPath();
+      ctx.arc(px + 7.5, py + 5, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#E0F6FF';
+      ctx.beginPath();
+      ctx.arc(px + 7.5, py + 5, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(px + 7.5, py + 5, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // 氷の結晶エフェクト
+      ctx.strokeStyle = '#87CEEB';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(px + 7.5, py + 5);
+        ctx.lineTo(px + 7.5 + Math.cos(angle) * 10, py + 5 + Math.sin(angle) * 10);
+        ctx.stroke();
+      }
+      break;
+      
+    case 'beam':
+      // 虹色の極太ビーム
+      const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+      const colorIndex = Math.floor(p.timer / 3) % colors.length;
+      ctx.fillStyle = colors[colorIndex];
+      ctx.fillRect(px, py, 30, 30);
+      // 虹色のグラデーション効果
+      for (let i = 0; i < 7; i++) {
+        ctx.fillStyle = colors[(colorIndex + i) % colors.length];
+        ctx.fillRect(px + i * 4, py, 4, 30);
+      }
+      // 光るエフェクト
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillRect(px + 10, py, 10, 30);
+      break;
+  }
+}
+
+// アイテム描画（救急箱）
+function drawItem(item) {
+  const px = item.x - camera.x;
+  const py = item.y;
+  
+  if (item.type === 'medkit') {
+    // 救急箱の描画（8bit風）
+    // 本体（白）
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(px, py, 20, 15);
+    // 赤十字
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(px + 7, py + 2, 6, 11); // 縦線
+    ctx.fillRect(px + 3, py + 5, 14, 5); // 横線
+    // 縁取り
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px, py, 20, 15);
+    // 光るエフェクト（浮遊に合わせて）
+    const glow = Math.sin(item.floatTimer * 0.1) * 0.3 + 0.7;
+    ctx.fillStyle = `rgba(255,0,0,${glow * 0.3})`;
+    ctx.fillRect(px - 2, py - 2, 24, 19);
+  }
+}
+
+// 描画処理
+function draw() {
+  const stage = stages[gameState.stage - 1];
+  
+  // 背景
+  ctx.fillStyle = stage.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // ステージごとの背景要素描画
+  drawStageBackground(gameState.stage);
+
+  // 地面
+  ctx.fillStyle = stage.ground;
+  ctx.fillRect(0, 350, canvas.width, 100);
+  
+  // 地面のテクスチャ（8bit風）
+  ctx.fillStyle = stage.ground === '#90EE90' ? '#7CCD7C' : '#555';
+  for (let i = 0; i < canvas.width; i += 40) {
+    ctx.fillRect(i - (camera.x % 40), 350, 20, 5);
+    ctx.fillRect(i + 20 - (camera.x % 40), 355, 20, 5);
+  }
+
+  // 障害物描画
+  obstacles.forEach(obs => {
+    if (obs.x + obs.w > camera.x - 50 && obs.x < camera.x + 850) {
+      obs.draw();
+    }
+  });
+
+  // プレイヤー描画（ステージごと）
+  drawPlayerSVG(player.x, player.y, player.invincible, gameState.stage);
+
+  // 敵描画（ステージごと）
+  enemies.forEach(e => drawEnemySVG(e.x, e.y, e.type, gameState.stage, e.enemyType));
+  if (boss) drawEnemySVG(boss.x, boss.y, 'boss', gameState.stage);
+
+  // 弾描画
+  projectiles.forEach(p => {
+    drawProjectileSVG(p.x, p.y - (p.h || 6) / 2, p.enemy, p);
+  });
+
+  // アイテム描画
+  items.forEach(item => {
+    if (!item.collected) {
+      drawItem(item);
+    }
+  });
+
+  // ステージ名表示（開始時）
+  if (stageProgress < 100) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 200, canvas.width, 50);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 30px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`STAGE ${gameState.stage}: ${stage.name}`, canvas.width / 2, 235);
+  }
+
+  // ボス警告
+  const currentStageLength = getStageLength(gameState.stage);
+  if (bossActive && boss && stageProgress < currentStageLength + 100) {
+    ctx.fillStyle = 'rgba(255,0,0,0.3)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#FF0000';
+    ctx.font = 'bold 40px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('BOSS BATTLE', canvas.width / 2, 100);
+    ctx.fillText(stage.boss, canvas.width / 2, 150);
+  }
+}
+
+// 当たり判定
+function checkCollision(a, b) {
+  return a.x < b.x + b.w &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.h &&
+         a.y + a.h > b.y;
+}
+
+// 次ステージ
+function nextStage() {
+  if (gameState.stage < 7) {
+    gameState.stage++;
+    gameState.score += 1000;
+    player.hp = Math.min(player.maxHp, player.hp + 50);
+    stageProgress = 0;
+    enemies = [];
+    projectiles = [];
+    obstacles = [];
+    enemySpawnTimer = 0;
+    enemySpawnCounter = 0;
+    // プレイヤー位置もリセット
+    player.x = 100;
+    player.y = 300;
+    player.vx = 0;
+    player.vy = 0;
+    camera.x = 0;
+    // 新しいステージの障害物生成
+    generateObstacles(gameState.stage);
+  } else {
+    // ゲームクリア（エンディング画面表示）
+    gameClear();
+  }
+}
+
+// ゲームクリア（エンディング画面）
+function gameClear() {
+  gameState.started = false;
+  document.getElementById('endingScore').textContent = gameState.score;
+  document.getElementById('endingScreen').style.display = 'flex';
+}
+
+// ゲームオーバー
+function gameOver() {
+  gameState.started = false;
+  document.getElementById('finalScore').textContent = gameState.score;
+  document.getElementById('gameOverScreen').style.display = 'flex';
+}
+
+// ゲームループ
+function gameLoop() {
+  update();
+  draw();
+  if (gameState.started) {
+    requestAnimationFrame(gameLoop);
+  }
+}
+
+// タッチ/マウス操作
+function setupControls() {
+  const btns = {
+    leftBtn: 'left',
+    rightBtn: 'right',
+    jumpBtn: 'jump',
+    attackBtn: 'attack'
+  };
+
+  Object.entries(btns).forEach(([id, key]) => {
+    const btn = document.getElementById(id);
+    
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      keys[key] = true;
+    });
+    
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      keys[key] = false;
+    });
+    
+    btn.addEventListener('mousedown', () => keys[key] = true);
+    btn.addEventListener('mouseup', () => keys[key] = false);
+  });
+}
+
+// キーボード操作
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') keys.left = true;
+  if (e.key === 'ArrowRight') keys.right = true;
+  if (e.key === 'ArrowUp' || e.key === ' ') keys.jump = true;
+  if (e.key === 'z' || e.key === 'Z') keys.attack = true;
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowLeft') keys.left = false;
+  if (e.key === 'ArrowRight') keys.right = false;
+  if (e.key === 'ArrowUp' || e.key === ' ') keys.jump = false;
+  if (e.key === 'z' || e.key === 'Z') keys.attack = false;
+});
+
+setupControls();
+</script>
+</body>
+</html>
