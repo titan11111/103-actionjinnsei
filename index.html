@@ -1872,78 +1872,134 @@ function update() {
   // 障害物更新
   obstacles.forEach(obs => obs.update());
 
-  // 地面判定と障害物（台）の上に乗る判定
+  // 地面・台の判定
   const groundY = 350;
   player.onGround = false;
   
-  // 台の上に乗れるかチェック
   for (let obs of obstacles) {
     if (obs.type === 'platform' || obs.type === 'movingPlatform') {
-      // プレイヤーの足が台の上にあるか
       if (player.x + player.w > obs.x && player.x < obs.x + obs.w &&
           player.y + player.h >= obs.y && player.y + player.h < obs.y + 10 &&
           player.vy >= 0) {
         player.y = obs.y - player.h;
         player.vy = 0;
         player.onGround = true;
-        // 動く台の場合は一緒に動く
-        if (obs.type === 'movingPlatform') {
-          player.x += obs.vx;
-        }
+        if (obs.type === 'movingPlatform') player.x += obs.vx;
       }
     } else if (obs.type === 'jumpPad') {
-      // ジャンプ台の上にいる場合
       if (player.x + player.w > obs.x && player.x < obs.x + obs.w &&
           player.y + player.h >= obs.y && player.y + player.h < obs.y + 10 &&
           player.vy >= 0) {
         player.y = obs.y - player.h;
-        player.vy = -18; // 高く跳ぶ
+        player.vy = -18;
         player.onGround = false;
       }
     }
   }
   
-  // 地面判定
   if (player.y + player.h >= groundY && !player.onGround) {
     player.y = groundY - player.h;
     player.vy = 0;
     player.onGround = true;
   }
 
-  // ジャンプ
   if (keys.jump && player.onGround) {
     player.vy = -player.jumpPower;
     player.onGround = false;
   }
 
-  // オメガビームのチャージチェック
-  if (omegaBeam.isCharging && omegaBeam.charges > 0) {
+  // ★修正ポイント：オメガビームのチャージ（攻撃ボタンが押されている間、裏でカウントする）
+  if (keys.attack && omegaBeam.charges > 0 && !omegaBeam.isActive) {
+    if (!omegaBeam.isCharging) {
+      omegaBeam.isCharging = true;
+      omegaBeam.chargeStartTime = Date.now();
+    }
+    
     const chargeTime = Date.now() - omegaBeam.chargeStartTime;
     if (chargeTime >= omegaBeam.chargeDuration) {
-      // 3秒経過したらオメガビーム発動
       activateOmegaBeam();
       omegaBeam.isCharging = false;
       omegaBeam.charges--;
+      omegaBeam.chargeStartTime = Date.now(); // 連続発動防止のためリセット
     }
+  } else {
+    omegaBeam.isCharging = false;
   }
   
-  // オメガビームのアクティブ状態更新
   if (omegaBeam.isActive) {
     omegaBeam.activeTimer++;
-    if (omegaBeam.activeTimer > 120) { // 2秒間アクティブ
+    if (omegaBeam.activeTimer > 120) {
       omegaBeam.isActive = false;
       omegaBeam.activeTimer = 0;
     }
   }
   
-  // 通常攻撃（スコアに応じてタイプが変わる）
+  // ★修正ポイント：通常攻撃（チャージ中かどうかに関わらず、クールダウンが0なら撃てる）
   if (player.attackCooldown > 0) player.attackCooldown--;
-  if (keys.attack && player.attackCooldown === 0 && !omegaBeam.isCharging) {
+  if (keys.attack && player.attackCooldown === 0) {
     player.attacking = true;
     const attackType = getAttackTypeByScore();
     createPlayerProjectile(attackType);
-    keys.attack = false;
+    // 連打感を出すために、ここで keys.attack = false にはしません（押しっぱなし連射を許可）
   }
+
+  if (player.invincible > 0) player.invincible--;
+  camera.x = Math.max(0, player.x - 200);
+
+  // ステージ進行と敵の処理（以下略、既存のロジックを維持）
+  if (!bossActive) {
+    stageProgress = Math.max(stageProgress, player.x);
+    enemySpawnTimer++;
+    if (enemySpawnTimer > 90 && enemies.length < 5) {
+      const spawnX = camera.x + 850;
+      const spawnY = groundY - 30;
+      let enemyTypes = ['normal', 'jumping', 'hovering']; // 簡易化
+      const selectedType = enemyTypes[enemySpawnCounter % enemyTypes.length];
+      enemies.push(new Enemy(spawnX, spawnY, 'normal', selectedType, gameState.stage));
+      enemySpawnCounter++;
+      enemySpawnTimer = 0;
+    }
+
+    const currentStageLength = getStageLength(gameState.stage);
+    if (stageProgress > currentStageLength && !boss) {
+      bossActive = true;
+      boss = new Enemy(camera.x + 600, 200, 'boss', 'normal', gameState.stage);
+      playBossBGM(gameState.stage === 7);
+    }
+  }
+
+  enemies = enemies.filter(e => {
+    e.update();
+    return e.x > camera.x - 100 && e.hp > 0;
+  });
+
+  if (boss) {
+    boss.update();
+    if (boss.hp <= 0) { boss = null; bossActive = false; nextStage(); }
+  }
+
+  projectiles = projectiles.filter(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < camera.x - 50 || p.x > camera.x + 900) return false;
+    if (!p.enemy) {
+      for (let e of enemies) { if (checkCollision(p, e)) { e.hp -= 5; gameState.score += 10; return false; } }
+      if (boss && checkCollision(p, boss)) { boss.hp -= 3; gameState.score += 5; return false; }
+    } else {
+      if (checkCollision(p, player) && player.invincible === 0) {
+        player.hp -= 10; player.invincible = 60; if (player.hp <= 0) gameOver(); return false;
+      }
+    }
+    return true;
+  });
+
+  for (let e of enemies) {
+    if (checkCollision(player, e) && player.invincible === 0) {
+      player.hp -= 5; player.invincible = 60; if (player.hp <= 0) gameOver();
+    }
+  }
+  updateUI();
+}
+  // --- 修正箇所：ここまで ---
 
   // 無敵時間
   if (player.invincible > 0) player.invincible--;
@@ -2006,7 +2062,7 @@ function update() {
       // ボス戦BGMを再生（ラスボス判定: ステージ7）
       playBossBGM(gameState.stage === 7);
     }
-  }
+  
 
   // 敵更新
   enemies = enemies.filter(e => {
@@ -4390,126 +4446,30 @@ function setupControls() {
     const btn = document.getElementById(id);
     if (!btn) return;
     
-    // 攻撃ボタンの特別処理（長押し検出）
-    if (id === 'attackBtn') {
-      let chargeTimer = null;
-      let chargeStartTime = 0;
-      
-      const startCharge = () => {
-        if (omegaBeam.charges <= 0) return; // 使用回数がない場合は無効
-        omegaBeam.isCharging = true;
-        chargeStartTime = Date.now();
-        omegaBeam.chargeStartTime = chargeStartTime;
-        btn.style.background = 'rgba(255,0,0,0.5)';
-        btn.style.boxShadow = '0 0 20px rgba(255,0,0,0.8)';
-      };
-      
-      const stopCharge = () => {
-        omegaBeam.isCharging = false;
-        btn.style.background = '';
-        btn.style.boxShadow = '';
-        if (chargeTimer) {
-          clearInterval(chargeTimer);
-          chargeTimer = null;
-        }
-      };
-      
-      // タッチイベント（iOS対応）
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        keys[key] = true;
-        startCharge();
-      }, { passive: false });
-      
-      btn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        keys[key] = false;
-        stopCharge();
-      }, { passive: false });
-      
-      btn.addEventListener('touchcancel', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        keys[key] = false;
-        stopCharge();
-      }, { passive: false });
-      
-      // マウスイベント（デスクトップ対応）
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        keys[key] = true;
-        startCharge();
-      });
-      
-      btn.addEventListener('mouseup', (e) => {
-        e.preventDefault();
-        keys[key] = false;
-        stopCharge();
-      });
-      
-      btn.addEventListener('mouseleave', (e) => {
-        keys[key] = false;
-        stopCharge();
-      });
-    } else {
-      // 通常のボタン処理
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        keys[key] = true;
-        btn.style.background = 'rgba(255,255,255,0.7)';
-      }, { passive: false });
-      
-      btn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        keys[key] = false;
-        btn.style.background = '';
-      }, { passive: false });
-      
-      btn.addEventListener('touchcancel', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        keys[key] = false;
-        btn.style.background = '';
-      }, { passive: false });
-      
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        keys[key] = true;
-        btn.style.background = 'rgba(255,255,255,0.7)';
-      });
-      
-      btn.addEventListener('mouseup', (e) => {
-        e.preventDefault();
-        keys[key] = false;
-        btn.style.background = '';
-      });
-      
-      btn.addEventListener('mouseleave', (e) => {
-        keys[key] = false;
-        btn.style.background = '';
-      });
-    }
+    // 全ボタン共通の処理：押している間だけ keys[key] を true にする
+    const startAction = (e) => {
+      e.preventDefault();
+      keys[key] = true;
+      // 攻撃ボタンだけ赤く光らせる演出
+      btn.style.background = (id === 'attackBtn') ? 'rgba(255,0,0,0.5)' : 'rgba(255,255,255,0.7)';
+    };
+    
+    const stopAction = (e) => {
+      e.preventDefault();
+      keys[key] = false;
+      btn.style.background = '';
+    };
+
+    btn.addEventListener('touchstart', startAction, { passive: false });
+    btn.addEventListener('touchend', stopAction, { passive: false });
+    btn.addEventListener('mousedown', startAction);
+    btn.addEventListener('mouseup', stopAction);
+    btn.addEventListener('mouseleave', stopAction);
   });
   
-  // 画面全体のタッチイベントを防止（iOSでのスクロール防止）
+  // スクロールやズームの防止
   document.addEventListener('touchmove', (e) => {
-    if (e.target.closest('#controls') || e.target.closest('.btn')) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-  
-  // iOSでのダブルタップズームを防止
-  let lastTouchEnd = 0;
-  document.addEventListener('touchend', (e) => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
-      e.preventDefault();
-    }
-    lastTouchEnd = now;
+    if (e.target.closest('#controls')) e.preventDefault();
   }, { passive: false });
 }
 
